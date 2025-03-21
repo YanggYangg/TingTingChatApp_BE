@@ -36,7 +36,7 @@ const messages = [
         conversationId: new mongoose.Types.ObjectId(),
         sender: [
             {
-                userId: "user123",
+                userId: ["65ffabcd9876def012345678", "65ffabcd9876def012345679"],
                 content: "Xin chào!",
                 messageType: "text",
                 status: "sent",
