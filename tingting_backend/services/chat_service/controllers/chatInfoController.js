@@ -1,204 +1,160 @@
-const Conversation = require('../models/Conversation');
-const Message = require('../models/Message');
+import React, { useState, useEffect } from "react";
+import Switch from "react-switch";
+import { FaExclamationTriangle, FaTrash, FaDoorOpen, FaBell, FaBellSlash } from "react-icons/fa";
+import axios from "axios";
 
-module.exports = {
-    // Lấy thông tin nhóm/chat
-    getChatInfo: async (req, res) => {
-        console.log(`🔎 Lấy thông tin chat`);
-        try {
-            const { chatId } = req.params;
-            console.log(` Lấy thông tin chat với ID: ${chatId}`);
-            const chat = await Conversation.findById(chatId).populate('participants.userId', 'name avatar');
-            if (!chat) {
-                console.log(` Chat ID ${chatId} không tồn tại`);
-                return res.status(404).json({ message: 'Chat không tồn tại' });
-            }
-            console.log(` Dữ liệu chat:`, chat);   
-            res.json(chat);
-        } catch (error) {
-            console.error(` Lỗi khi lấy thông tin chat:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
+const SecuritySettings = ({ chatId }) => {
+  const [isHidden, setIsHidden] = useState(false);
+  const [pin, setPin] = useState("");
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [isGroup, setIsGroup] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
-    // Cập nhật thông tin nhóm (tên, avatar)
-    updateChatInfo: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const { name, avatar } = req.body;
-            console.log(`🔄 Cập nhật thông tin chat với ID: ${chatId}`);
-            console.log(`🔄 Dữ liệu mới:`, { name, avatar });
-            
-            const updatedChat = await Conversation.findByIdAndUpdate(chatId, { name, avatar }, { new: true });
-            console.log(` Chat sau khi cập nhật:`, updatedChat);
-            res.json(updatedChat);
-        } catch (error) {
-            console.error(` Lỗi khi cập nhật chat:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
+  useEffect(() => {
+    const fetchChatInfo = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/conversations/${chatId}`);
+        setIsGroup(response.data.isGroup);
+        setIsMuted(response.data.isMuted);
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin cuộc trò chuyện:", error);
+      }
+    };
+    fetchChatInfo();
+  }, [chatId]);
 
-    // Thêm thành viên vào nhóm
-    addParticipant: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const { userId, role } = req.body;
-            console.log(` Thêm user ${userId} với vai trò ${role} vào chat ${chatId}`);
-            const chat = await Conversation.findByIdAndUpdate(chatId, { $push: { participants: { userId, role } } }, { new: true });
-            console.log(` Chat sau khi thêm thành viên:`, chat);
-            res.json(chat);
-        } catch (error) {
-            console.error(` Lỗi khi thêm thành viên:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Xóa thành viên khỏi nhóm
-    removeParticipant: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const { userId } = req.body;
-            console.log(` Xóa user ${userId} khỏi chat ${chatId}`);
-            const chat = await Conversation.findByIdAndUpdate(chatId, { $pull: { participants: { userId } } }, { new: true });
-            console.log(` Chat sau khi xóa thành viên:`, chat);
-            res.json(chat);
-        } catch (error) {
-            console.error(` Lỗi khi xóa thành viên:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Thay đổi vai trò của thành viên
-    changeParticipantRole: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const { userId, role } = req.body;
-            console.log(`Thay đổi vai trò của user ${userId} thành ${role} trong chat ${chatId}`);
-            
-            const chat = await Conversation.findOneAndUpdate({ _id: chatId, 'participants.userId': userId }, { $set: { 'participants.$.role': role } }, { new: true });
-           console.log(` Chat sau khi thay đổi vai trò:`, chat);
-           
-            res.json(chat);
-        } catch (error) {
-            console.log(` Lỗi khi thay đổi vai trò:`, error);
-            
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Lấy danh sách ảnh/video đã gửi trong nhóm
-    getChatMedia: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const media = await Message.find({
-                conversationId: chatId,
-                'message.messageType': { $in: ['image', 'video'] }
-            });
-
-            console.log(` Lấy danh sách media trong chat ${chatId}`);
-            console.log(` Danh sách media:`, media);
-             res.json(media);
-        } catch (error) {
-            console.log(` Lỗi khi lấy danh sách media:`, error);
-            
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Lấy danh sách file đã gửi trong nhóm
-    getChatFiles: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const files = await Message.find({
-                conversationId: chatId,
-                'message.messageType': 'file'
-            });
-            console.log(`Lấy danh sách file trong chat ${chatId}`);
-            console.log(` Danh sách file:`, files);
-            
-            
-            res.json(files);
-        } catch (error) {
-            console.log(` Lỗi khi lấy danh sách file:`, error);
-            
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Lấy danh sách link đã gửi trong nhóm
-    getChatLinks: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const links = await Message.find({
-                conversationId: chatId,
-                'message.messageType': 'link'
-            });
-            console.log(` Lấy danh sách link trong chat ${chatId}`);
-            console.log(` Danh sách link:`, links);
-            
-            res.json(links);
-        } catch (error) {
-            console.log(` Lỗi khi lấy danh sách link:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Lấy danh sách tin nhắn đã ghim
-    getPinnedMessages: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const pinnedMessages = await Message.find({ conversationId: chatId, 'message.isPinned': true });
-            console.log(` Lấy danh sách tin nhắn đã ghim trong chat ${chatId}`);
-            console.log(` Danh sách tin nhắn đã ghim:`, pinnedMessages);
-            
-            res.json(pinnedMessages);
-        } catch (error) {
-            console.log(` Lỗi khi lấy danh sách tin nhắn đã ghim:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Ghim một tin nhắn quan trọng
-    pinMessage: async (req, res) => {
-        try {
-            const { messageId } = req.params;
-            const message = await Message.findByIdAndUpdate(messageId, { 'message.isPinned': true }, { new: true });
-            console.log(` Ghim tin nhắn ${messageId}`);
-            console.log(` Tin nhắn đã ghim:`, message);
-            
-            res.json(message);
-        } catch (error) {
-            console.log(` Lỗi khi ghim tin nhắn:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Bỏ ghim tin nhắn
-    unpinMessage: async (req, res) => {
-        try {
-            const { messageId } = req.params;
-            const message = await Message.findByIdAndUpdate(messageId, { 'message.isPinned': false }, { new: true });
-            console.log(`📍 Bỏ ghim tin nhắn ${messageId}`);
-            console.log(` Tin nhắn sau khi bỏ ghim:`, message);
-            
-            res.json(message);
-        } catch (error) {
-            console.log(` Lỗi khi bỏ ghim tin nhắn:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Lấy danh sách nhắc hẹn trong nhóm
-    getReminders: async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            console.log(` Lấy danh sách nhắc hẹn trong chat ${chatId}`);
-            const reminders = await Message.find({ conversationId: chatId, 'message.messageType': 'reminder' });
-            console.log(` Danh sách nhắc hẹn:`, reminders);
-            res.json(reminders);
-        } catch (error) {
-            console.log(` Lỗi khi lấy danh sách nhắc hẹn:`, error);
-            res.status(500).json({ error: error.message });
-        }
+  const handleToggle = (checked) => {
+    if (checked) {
+      setShowPinInput(true);
+    } else {
+      setIsHidden(false);
+      setShowPinInput(false);
+      setPin("");
     }
+  };
+
+  const handleSubmitPin = () => {
+    if (pin.length === 4) {
+      setIsHidden(true);
+      setShowPinInput(false);
+    } else {
+      alert("Mã PIN phải có 4 chữ số!");
+    }
+  };
+
+  const handleReport = async () => {
+    try {
+      await axios.post(`http://localhost:5000/conversations/${chatId}/report`);
+      alert("Đã gửi báo cáo thành công!");
+    } catch (error) {
+      console.error("Lỗi khi báo cáo cuộc trò chuyện:", error);
+    }
+  };
+
+  const handleDeleteHistory = async () => {
+    try {
+      await axios.delete(`http://localhost:5000/conversations/${chatId}/messages`);
+      alert("Đã xóa lịch sử trò chuyện!");
+    } catch (error) {
+      console.error("Lỗi khi xóa lịch sử trò chuyện:", error);
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    try {
+      await axios.post(`http://localhost:5000/conversations/${chatId}/leave`);
+      alert("Bạn đã rời khỏi nhóm!");
+    } catch (error) {
+      console.error("Lỗi khi rời nhóm:", error);
+    }
+  };
+
+  const toggleMute = async () => {
+    try {
+      await axios.put(`http://localhost:5000/conversations/${chatId}/mute`, {
+        isMuted: !isMuted,
+      });
+      setIsMuted(!isMuted);
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái thông báo:", error);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <h3 className="text-md font-semibold mb-2">Thiết lập bảo mật</h3>
+
+      {/* Bật/tắt thông báo */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm">Thông báo</span>
+        <button onClick={toggleMute} className="text-gray-600 hover:text-gray-800">
+          {isMuted ? <FaBellSlash size={18} /> : <FaBell size={18} />}
+        </button>
+      </div>
+
+      {/* Ẩn trò chuyện */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm">Ẩn trò chuyện</span>
+        <Switch
+          onChange={handleToggle}
+          checked={isHidden}
+          offColor="#ccc"
+          onColor="#3b82f6"
+          uncheckedIcon={false}
+          checkedIcon={false}
+          height={22}
+          width={44}
+          handleDiameter={18}
+        />
+      </div>
+
+      {/* Form nhập mã PIN */}
+      {showPinInput && (
+        <div className="mt-2 p-3 bg-gray-100 rounded-lg">
+          <label className="block text-sm font-semibold mb-1">Nhập mã PIN (4 chữ số)</label>
+          <input
+            type="password"
+            maxLength="4"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+            placeholder="****"
+          />
+          <button
+            onClick={handleSubmitPin}
+            className="w-full mt-2 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
+          >
+            Xác nhận
+          </button>
+        </div>
+      )}
+
+      {/* Các nút hành động */}
+      <button
+        className="w-full text-red-500 text-left flex items-center gap-2 mt-2"
+        onClick={handleReport}
+      >
+        <FaExclamationTriangle size={16} />
+        Báo xấu
+      </button>
+      <button
+        className="w-full text-red-500 text-left flex items-center gap-2 mt-2"
+        onClick={handleDeleteHistory}
+      >
+        <FaTrash size={16} />
+        Xóa lịch sử trò chuyện
+      </button>
+      {isGroup && (
+        <button
+          className="w-full text-red-500 text-left flex items-center gap-2 mt-2"
+          onClick={handleLeaveGroup}
+        >
+          <FaDoorOpen size={16} />
+          Rời nhóm
+        </button>
+      )}
+    </div>
+  );
 };
+
+export default SecuritySettings;
