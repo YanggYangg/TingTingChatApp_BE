@@ -11,6 +11,6 @@ router.post('/:chatId/participants', chatInfoController.addParticipant);
 router.delete('/:chatId/participants', chatInfoController.removeParticipant);
 router.put('/:chatId/participants/role', chatInfoController.changeParticipantRole); // Chưa
 // Cập nhật trạng thái tắt/bật thông báo nhóm
-router.put('/:chatId/mute', chatInfoController.updateNotification);
+// router.put('/:chatId/mute', chatInfoController.updateNotification);
 
 module.exports = router;

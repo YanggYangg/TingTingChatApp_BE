@@ -1,40 +1,50 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    conversationId:{
-        type: mongoose.Schema.Types.ObjectId, ref: 'Conversation',
+    conversationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Conversation',
+        required: true,
+        index: true // Tạo index để truy vấn theo conversation nhanh hơn
+    },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true // Tạo index để tìm tin nhắn theo người dùng nhanh hơn
+    },
+    content: {
+        type: String,
         required: true
     },
-    sender:[
-        {
-            //userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-            userId: { 
-                type: String, 
-                required: true 
-            },
-            content: {
-                type: String,
-                required: true
-            },
-            messageType:{
-                type: String,
-                enum: ['text', 'image', 'file', 'video', 'link'],
-                required: true
-            },
-            status:{
-                type: String,
-                enum: ['sent', 'received', 'viewed'],
-                default: 'sent'
-            },
-            time:{
-                type: Date,
-                default: Date.now
-            }
-        }
-    ],
-    createdAt: { 
-        type: Date, 
-        default: Date.now }
+    messageType: {
+        type: String,
+        enum: ['text', 'image', 'file', 'video', 'link'],
+        required: true
+    },
+    linkURL: {
+        type: String,
+        default: null
+    },
+    status: {
+        sent: {
+            type: Boolean,
+            default: true
+        },
+        receivedBy: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }],
+        readBy: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }]
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        index: true // Tạo index để sắp xếp tin nhắn theo thời gian nhanh hơn
+    }
 });
 
 // Tạo index tổng hợp cho truy vấn hiệu suất cao
