@@ -6,9 +6,16 @@ const conversationRoutes = require('./routes/conversationRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 
 
+
 const app = express();
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
+
+app.use(cors({ 
+    origin: "http://localhost:5174", // Chỉ cho phép frontend truy cập
+    credentials: true // Nếu frontend gửi cookie/token, cần bật credentials
+  }));
+  
 
 app.use('/conversations', conversationRoutes);
 app.use('/messages', messageRoutes);
