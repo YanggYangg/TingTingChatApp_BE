@@ -11,11 +11,13 @@ const app = express();
 // app.use(cors());
 app.use(express.json());
 
-app.use(cors({ 
-    origin: "http://localhost:5174", // Chỉ cho phép frontend truy cập
-    credentials: true // Nếu frontend gửi cookie/token, cần bật credentials
-  }));
-  
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, true); // Cho phép tất cả các nguồn
+  },
+  credentials: true 
+}));
+
 
 app.use('/conversations', conversationRoutes);
 app.use('/messages', messageRoutes);
