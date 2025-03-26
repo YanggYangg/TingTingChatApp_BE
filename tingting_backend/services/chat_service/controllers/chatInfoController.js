@@ -20,7 +20,7 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
-    // Lấy danh sách thành viên trong nhóm chat
+    // Lấy danh sách thành viên trong nhóm chat (Không cần thiết)
     getParticipants: async (req, res) => {
         try {
             const { chatId } = req.params;
