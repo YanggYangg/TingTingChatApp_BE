@@ -7,7 +7,7 @@ router.get('/', getAllConversations);
 
 router.get('/:chatId', chatInfoController.getChatInfo);
 router.put('/:chatId', chatInfoController.updateChatInfo);
-router.get('/:chatId/participants', chatInfoController.getParticipants);
+// router.get('/:chatId/participants', chatInfoController.getParticipants);
 router.post('/:chatId/participants', chatInfoController.addParticipant);
 router.delete('/:chatId/participants', chatInfoController.removeParticipant);
 router.put('/:chatId/participants/role', chatInfoController.changeParticipantRole); // Chưa
