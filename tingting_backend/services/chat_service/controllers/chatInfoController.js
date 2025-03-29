@@ -21,25 +21,25 @@ module.exports = {
         }
     },
     // Lấy danh sách thành viên trong nhóm chat (Không cần thiết)
-    // getParticipants: async (req, res) => {
-    //     try {
-    //         const { chatId } = req.params;
-    //         console.log(`📌 Lấy danh sách thành viên trong nhóm chat ${chatId}`);
+    getParticipants: async (req, res) => {
+        try {
+            const { chatId } = req.params;
+            console.log(`Lấy danh sách thành viên trong nhóm chat ${chatId}`);
 
-    //         const chat = await Conversation.findById(chatId).populate('participants.userId', 'name avatar email');
+            const chat = await Conversation.findById(chatId).populate('participants.userId', 'name avatar email');
 
-    //         if (!chat) {
-    //             console.log(`❌ Không tìm thấy nhóm với ID: ${chatId}`);
-    //             return res.status(404).json({ message: 'Nhóm không tồn tại' });
-    //         }
+            if (!chat) {
+                console.log(`Không tìm thấy nhóm với ID: ${chatId}`);
+                return res.status(404).json({ message: 'Nhóm không tồn tại' });
+            }
 
-    //         console.log(`✅ Danh sách thành viên:`, chat.participants);
-    //         res.json(chat.participants);
-    //     } catch (error) {
-    //         console.error(`❌ Lỗi khi lấy danh sách thành viên:`, error);
-    //         res.status(500).json({ error: error.message });
-    //     }
-    // },
+            console.log(`Danh sách thành viên:`, chat.participants);
+            res.json(chat.participants);
+        } catch (error) {
+            console.error(`Lỗi khi lấy danh sách thành viên:`, error);
+            res.status(500).json({ error: error.message });
+        }
+    },
 
     // Cập nhật thông tin nhóm (tên, avatar)
     updateChatInfo: async (req, res) => {
