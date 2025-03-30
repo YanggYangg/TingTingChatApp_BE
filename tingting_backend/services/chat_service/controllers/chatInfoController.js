@@ -78,27 +78,27 @@ module.exports = {
         try {
             const { chatId } = req.params;
             const { userId } = req.body;
-
+    
             console.log(`Xóa user ${userId} khỏi chat ${chatId}`);
             console.log("Body nhận được:", req.body); // Kiểm tra dữ liệu gửi lên
-
+    
             // Kiểm tra nếu không có userId
             if (!userId) {
                 return res.status(400).json({ error: "Thiếu userId!" });
             }
-
+    
             // Xóa userId khỏi danh sách participants
             const chat = await Conversation.findByIdAndUpdate(
                 chatId,
-                { $pull: { participants: { userId } } },
+                { $pull: { participants: { userId: userId } } }, // Sửa điều kiện $pull
                 { new: true }
             );
-
+    
             if (!chat) {
                 console.error(`Không tìm thấy chat với ID: ${chatId}`);
                 return res.status(404).json({ error: "Chat không tồn tại." });
             }
-
+    
             console.log(`Chat sau khi xóa thành viên:`, chat);
             res.json(chat);
         } catch (error) {
@@ -106,7 +106,6 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
-
     // Thay đổi vai trò của thành viên
     changeParticipantRole: async (req, res) => {
         try {
