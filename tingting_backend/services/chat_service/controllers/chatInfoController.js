@@ -78,27 +78,27 @@ module.exports = {
         try {
             const { chatId } = req.params;
             const { userId } = req.body;
-    
+
             console.log(`Xóa user ${userId} khỏi chat ${chatId}`);
             console.log("Body nhận được:", req.body); // Kiểm tra dữ liệu gửi lên
-    
+
             // Kiểm tra nếu không có userId
             if (!userId) {
                 return res.status(400).json({ error: "Thiếu userId!" });
             }
-    
+
             // Xóa userId khỏi danh sách participants
             const chat = await Conversation.findByIdAndUpdate(
                 chatId,
                 { $pull: { participants: { userId: userId } } }, // Sửa điều kiện $pull
                 { new: true }
             );
-    
+
             if (!chat) {
                 console.error(`Không tìm thấy chat với ID: ${chatId}`);
                 return res.status(404).json({ error: "Chat không tồn tại." });
             }
-    
+
             console.log(`Chat sau khi xóa thành viên:`, chat);
             res.json(chat);
         } catch (error) {
@@ -239,21 +239,40 @@ module.exports = {
         try {
             const { chatId } = req.params;
             const { mute } = req.body;
-    
+
             console.log(`Cập nhật trạng thái thông báo nhóm ${chatId} thành ${mute}`);
-    
+
             const chat = await Conversation.findByIdAndUpdate(
                 chatId,
                 { mute: mute },
                 { new: true }
             );
-    
+
             console.log(`Chat sau khi cập nhật trạng thái thông báo:`, chat);
             res.json(chat);
         } catch (error) {
             console.log(`Lỗi khi cập nhật trạng thái thông báo nhóm:`, error);
             res.status(500).json({ error: error.message });
         }
+    },
+    // Ẩn trò chuyện
+    hideChat: async (req, res) => {
+        try {
+            const { chatId } = req.params;
+            const { isHidden } = req.body;
+            console.log(`Cập nhật trạng thái ẩn nhóm ${chatId} thành ${isHidden}`);
+            const chat = await Conversation.findByIdAndUpdate(
+                chatId,
+                { isHidden: isHidden },
+                { new: true }
+            );
+            console.log(`Chat sau khi cập nhật trạng thái ẩn:`, chat);
+            res.json(chat);
+        } catch (error) {
+            console.log(`Lỗi khi cập nhật trạng thái ẩn nhóm:`, error);
+            res.status(500).json({ error: error.message });
+        }
     }
+
 
 };

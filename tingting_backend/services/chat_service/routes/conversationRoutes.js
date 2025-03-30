@@ -15,4 +15,7 @@ router.put('/:chatId/participants/role', chatInfoController.changeParticipantRol
 // Cập nhật trạng thái tắt/bật thông báo nhóm
 router.put('/:chatId/mute', chatInfoController.updateNotification);
 
+// Cập nhật trạng thái ẩn/hiện cuộc trò chuyện
+router.put('/:chatId/hide', chatInfoController.hideChat);
+
 module.exports = router;

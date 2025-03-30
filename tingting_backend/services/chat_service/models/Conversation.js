@@ -31,6 +31,10 @@ const conversationSchema = new mongoose.Schema({
         enum: ['1h', '4h', '8am', 'forever', null], // Cho phép giá trị null khi không tắt thông báo
         default: null,
     },
+    isHidden: {
+        type: Boolean,
+        default: false,
+    },
     createAt: {
         type: Date,
         default: Date.now,
