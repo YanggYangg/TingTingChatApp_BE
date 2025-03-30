@@ -232,5 +232,28 @@ module.exports = {
             console.log(` Lỗi khi lấy danh sách nhắc hẹn:`, error);
             res.status(500).json({ error: error.message });
         }
+    },
+
+    // Tắt/bật thông báo nhóm
+    updateNotification: async (req, res) => {
+        try {
+            const { chatId } = req.params;
+            const { mute } = req.body;
+    
+            console.log(`Cập nhật trạng thái thông báo nhóm ${chatId} thành ${mute}`);
+    
+            const chat = await Conversation.findByIdAndUpdate(
+                chatId,
+                { mute: mute },
+                { new: true }
+            );
+    
+            console.log(`Chat sau khi cập nhật trạng thái thông báo:`, chat);
+            res.json(chat);
+        } catch (error) {
+            console.log(`Lỗi khi cập nhật trạng thái thông báo nhóm:`, error);
+            res.status(500).json({ error: error.message });
+        }
     }
+
 };

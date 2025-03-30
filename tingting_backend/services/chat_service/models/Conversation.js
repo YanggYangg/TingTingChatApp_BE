@@ -26,6 +26,11 @@ const conversationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Message',
     },
+    mute: {
+        type: String,
+        enum: ['1h', '4h', '8am', 'forever', null], // Cho phép giá trị null khi không tắt thông báo
+        default: null,
+    },
     createAt: {
         type: Date,
         default: Date.now,
