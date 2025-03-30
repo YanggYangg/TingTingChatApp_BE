@@ -41,15 +41,16 @@ module.exports = {
         }
     },
 
-    // Cập nhật thông tin nhóm (tên, avatar)
-    updateChatInfo: async (req, res) => {
+
+    // Cập nhật tên nhóm
+    updateChatName: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const { name, avatar } = req.body;
-            console.log(`🔄 Cập nhật thông tin chat với ID: ${chatId}`);
-            console.log(`🔄 Dữ liệu mới:`, { name, avatar });
+            const { name } = req.body;
+            console.log(`Cập nhật tên chat với ID: ${chatId}`);
+            console.log(`Tên mới:`, name);
 
-            const updatedChat = await Conversation.findByIdAndUpdate(chatId, { name, avatar }, { new: true });
+            const updatedChat = await Conversation.findByIdAndUpdate(chatId, { name }, { new: true });
             console.log(` Chat sau khi cập nhật:`, updatedChat);
             res.json(updatedChat);
         } catch (error) {
@@ -73,17 +74,35 @@ module.exports = {
         }
     },
 
-    // Xóa thành viên khỏi nhóm
     removeParticipant: async (req, res) => {
         try {
             const { chatId } = req.params;
             const { userId } = req.body;
-            console.log(` Xóa user ${userId} khỏi chat ${chatId}`);
-            const chat = await Conversation.findByIdAndUpdate(chatId, { $pull: { participants: { userId } } }, { new: true });
-            console.log(` Chat sau khi xóa thành viên:`, chat);
+
+            console.log(`Xóa user ${userId} khỏi chat ${chatId}`);
+            console.log("Body nhận được:", req.body); // Kiểm tra dữ liệu gửi lên
+
+            // Kiểm tra nếu không có userId
+            if (!userId) {
+                return res.status(400).json({ error: "Thiếu userId!" });
+            }
+
+            // Xóa userId khỏi danh sách participants
+            const chat = await Conversation.findByIdAndUpdate(
+                chatId,
+                { $pull: { participants: { userId } } },
+                { new: true }
+            );
+
+            if (!chat) {
+                console.error(`Không tìm thấy chat với ID: ${chatId}`);
+                return res.status(404).json({ error: "Chat không tồn tại." });
+            }
+
+            console.log(`Chat sau khi xóa thành viên:`, chat);
             res.json(chat);
         } catch (error) {
-            console.error(` Lỗi khi xóa thành viên:`, error);
+            console.error(`Lỗi khi xóa thành viên:`, error);
             res.status(500).json({ error: error.message });
         }
     },

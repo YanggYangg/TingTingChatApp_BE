@@ -6,7 +6,7 @@ const chatInfoController = require('../controllers/chatInfoController');
 router.get('/', getAllConversations);
 
 router.get('/:chatId', chatInfoController.getChatInfo);
-router.put('/:chatId', chatInfoController.updateChatInfo);
+router.put('/:chatId', chatInfoController.updateChatName);
 router.get('/:chatId/participants', chatInfoController.getParticipants);
 router.post('/:chatId/participants', chatInfoController.addParticipant);
 router.delete('/:chatId/participants', chatInfoController.removeParticipant);

@@ -17,7 +17,7 @@ app.use(cors({
   },
   credentials: true 
 }));
-
+app.options('*', cors()); // Cho phép tất cả các yêu cầu OPTIONS
 
 app.use('/conversations', conversationRoutes);
 app.use('/messages', messageRoutes);
