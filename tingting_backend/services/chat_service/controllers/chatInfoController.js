@@ -175,51 +175,38 @@ module.exports = {
         }
     },
 
-    // Lấy danh sách tin nhắn đã ghim
-    getPinnedMessages: async (req, res) => {
+
+    // Ghim cuộc trò chuyện
+    pinChat: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const pinnedMessages = await Message.find({ conversationId: chatId, 'message.isPinned': true });
-            console.log(` Lấy danh sách tin nhắn đã ghim trong chat ${chatId}`);
-            console.log(` Danh sách tin nhắn đã ghim:`, pinnedMessages);
-
-            res.json(pinnedMessages);
+            const { isPinned } = req.body;
+    
+            console.log("Request body:", req.body);
+    
+            if (!req.body || typeof isPinned !== 'boolean') {
+                return res.status(400).json({ message: 'Invalid request body. isPinned must be a boolean.' });
+            }
+    
+            console.log(`Cập nhật trạng thái ghim nhóm ${chatId} thành ${isPinned}`);
+            const chat = await Conversation.findByIdAndUpdate(
+                chatId,
+                { isPinned: isPinned },
+                { new: true }
+            );
+    
+            console.log(`Chat sau khi cập nhật trạng thái ghim:`, chat);
+    
+            if (!chat) {
+                return res.status(404).json({ message: 'Conversation not found' });
+            }
+    
+            res.json(chat);
         } catch (error) {
-            console.log(` Lỗi khi lấy danh sách tin nhắn đã ghim:`, error);
-            res.status(500).json({ error: error.message });
+            console.log(`Lỗi khi cập nhật trạng thái ghim nhóm:`, error);
+            res.status(500).json({ error: error.message, stack: error.stack });
         }
     },
-
-    // Ghim một tin nhắn quan trọng
-    pinMessage: async (req, res) => {
-        try {
-            const { messageId } = req.params;
-            const message = await Message.findByIdAndUpdate(messageId, { 'message.isPinned': true }, { new: true });
-            console.log(` Ghim tin nhắn ${messageId}`);
-            console.log(` Tin nhắn đã ghim:`, message);
-
-            res.json(message);
-        } catch (error) {
-            console.log(` Lỗi khi ghim tin nhắn:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // Bỏ ghim tin nhắn
-    unpinMessage: async (req, res) => {
-        try {
-            const { messageId } = req.params;
-            const message = await Message.findByIdAndUpdate(messageId, { 'message.isPinned': false }, { new: true });
-            console.log(`📍 Bỏ ghim tin nhắn ${messageId}`);
-            console.log(` Tin nhắn sau khi bỏ ghim:`, message);
-
-            res.json(message);
-        } catch (error) {
-            console.log(` Lỗi khi bỏ ghim tin nhắn:`, error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
     // Lấy danh sách nhắc hẹn trong nhóm
     getReminders: async (req, res) => {
         try {

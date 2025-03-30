@@ -18,4 +18,7 @@ router.put('/:chatId/mute', chatInfoController.updateNotification);
 // Cập nhật trạng thái ẩn/hiện cuộc trò chuyện
 router.put('/:chatId/hide', chatInfoController.hideChat);
 
+// Cập nhật trạng thái ghim nhóm
+router.put('/:chatId/pin', chatInfoController.pinChat);
+
 module.exports = router;

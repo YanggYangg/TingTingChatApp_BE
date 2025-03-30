@@ -13,9 +13,6 @@ router.get('/:conversationId', getMessageByConversationId);
 router.get('/:chatId/media', chatInfoController.getChatMedia);
 router.get('/:chatId/files', chatInfoController.getChatFiles);
 router.get('/:chatId/links', chatInfoController.getChatLinks);
-router.get('/:chatId/pinned-messages', chatInfoController.getPinnedMessages);
-router.post('/pin/:messageId', chatInfoController.pinMessage);
-router.post('/unpin/:messageId', chatInfoController.unpinMessage);
 router.get('/:chatId/reminders', chatInfoController.getReminders);
 
 

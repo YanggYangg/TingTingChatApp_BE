@@ -8,15 +8,15 @@ const messageRoutes = require('./routes/messageRoutes');
 
 
 const app = express();
-// app.use(cors());
+app.use(cors());
 app.use(express.json());
 
-app.use(cors({
-  origin: (origin, callback) => {
-    callback(null, true); // Cho phép tất cả các nguồn
-  },
-  credentials: true 
-}));
+// app.use(cors({
+//   origin: (origin, callback) => {
+//     callback(null, true); // Cho phép tất cả các nguồn
+//   },
+//   // credentials: true 
+// }));
 app.options('*', cors()); // Cho phép tất cả các yêu cầu OPTIONS
 
 app.use('/conversations', conversationRoutes);
