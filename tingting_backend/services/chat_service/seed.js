@@ -16,6 +16,9 @@ const conversations = [
             { userId: "6601a1b2c3d4e5f678901239", role: "member" }
         ],
         lastMessage: null,
+        mute: null,
+        isHidden: false,
+        isPinned: false,
         createAt: new Date(),
         updateAt: new Date()
     },
@@ -42,6 +45,7 @@ const messages = [
         messageType: "text",
         linkURL: null,
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     // Tin nhắn hình ảnh
@@ -52,6 +56,7 @@ const messages = [
         messageType: "image",
         linkURL: "https://imageurl.com/photo.jpg",
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     // Tin nhắn file
@@ -62,6 +67,7 @@ const messages = [
         messageType: "file",
         linkURL: "https://fileurl.com/document.pdf",
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     // Tin nhắn video
@@ -72,6 +78,7 @@ const messages = [
         messageType: "video",
         linkURL: "https://videourl.com/demo.mp4",
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     // Tin nhắn link
@@ -82,6 +89,7 @@ const messages = [
         messageType: "link",
         linkURL: "https://blog.com/article",
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     
@@ -93,6 +101,7 @@ const messages = [
         messageType: "text",
         linkURL: null,
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     {
@@ -102,6 +111,7 @@ const messages = [
         messageType: "text",
         linkURL: null,
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     {
@@ -111,6 +121,7 @@ const messages = [
         messageType: "image",
         linkURL: "https://imageurl.com/funny.jpg",
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     },
     {
@@ -120,6 +131,7 @@ const messages = [
         messageType: "video",
         linkURL: "https://musicurl.com/song.mp4",
         status: { sent: true, receivedBy: [], readBy: [] },
+        deletedBy: [],
         createdAt: new Date()
     }
 ];
