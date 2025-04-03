@@ -264,8 +264,9 @@ module.exports = {
     deleteMessageForMe: async (req, res) => {
         try {
             const { messageId } = req.params;
-            const userId = req.user.id; // Lấy userId từ token (giả sử bạn có middleware xác thực)
-    
+            const userId = req.userId; 
+            console.log("Message ID from params:", messageId); // Kiểm tra messageId từ params
+            console.log("User ID from token:", userId); 
             console.log(`User ${userId} xóa tin nhắn ${messageId} chỉ ở phía họ`);
     
             const message = await Message.findById(messageId);
@@ -290,7 +291,15 @@ module.exports = {
     deleteChatHistoryForMe: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const userId = req.user.id; // Lấy userId từ token
+            const userId = req.body.userId;
+
+            console.log(`Xóa lịch sử trò chuyện với ID: ${chatId}`);
+            console.log("User ID từ token:", userId); 
+            // Kiểm tra nếu không có userId
+            if (!userId) {
+                return res.status(400).json({ error: "Thiếu userId!" });
+            }
+            
     
             console.log(`User ${userId} xóa lịch sử chat ${chatId} chỉ ở phía họ`);
     
