@@ -259,7 +259,53 @@ module.exports = {
             console.log(`Lỗi khi cập nhật trạng thái ẩn nhóm:`, error);
             res.status(500).json({ error: error.message });
         }
+    },
+    // Xóa tin nhắn cụ thể (phía người gửi)
+    deleteMessageForMe: async (req, res) => {
+        try {
+            const { messageId } = req.params;
+            const userId = req.user.id; // Lấy userId từ token (giả sử bạn có middleware xác thực)
+    
+            console.log(`User ${userId} xóa tin nhắn ${messageId} chỉ ở phía họ`);
+    
+            const message = await Message.findById(messageId);
+            if (!message) {
+                return res.status(404).json({ message: "Tin nhắn không tồn tại" });
+            }
+    
+            // Kiểm tra nếu tin nhắn đã bị xóa trước đó bởi user này
+            if (!message.deletedBy.includes(userId)) {
+                message.deletedBy.push(userId);
+                await message.save();
+            }
+    
+            res.json({ message: "Tin nhắn đã bị ẩn khỏi lịch sử của bạn." });
+        } catch (error) {
+            console.error("Lỗi khi xóa tin nhắn:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // Xóa toàn bộ tin nhắn trong cuộc trò chuyện (phía người gửi)
+    deleteChatHistoryForMe: async (req, res) => {
+        try {
+            const { chatId } = req.params;
+            const userId = req.user.id; // Lấy userId từ token
+    
+            console.log(`User ${userId} xóa lịch sử chat ${chatId} chỉ ở phía họ`);
+    
+            // Cập nhật tất cả tin nhắn trong cuộc trò chuyện đó
+            await Message.updateMany(
+                { conversationId: chatId },
+                { $addToSet: { deletedBy: userId } } // $addToSet tránh trùng lặp userId trong mảng
+            );
+    
+            res.json({ message: "Lịch sử trò chuyện đã bị ẩn khỏi tài khoản của bạn." });
+        } catch (error) {
+            console.error("Lỗi khi xóa lịch sử trò chuyện:", error);
+            res.status(500).json({ error: error.message });
+        }
     }
-
-
+    
+    
 };

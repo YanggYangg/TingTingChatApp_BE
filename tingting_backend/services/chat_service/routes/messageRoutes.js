@@ -14,6 +14,9 @@ router.get('/:chatId/media', chatInfoController.getChatMedia);
 router.get('/:chatId/files', chatInfoController.getChatFiles);
 router.get('/:chatId/links', chatInfoController.getChatLinks);
 router.get('/:chatId/reminders', chatInfoController.getReminders);
+router.delete('/:messageId', chatInfoController.deleteMessageForMe);
+router.delete('/:messageId/deleteChatHistoryForMe', chatInfoController.deleteChatHistoryForMe);
+
 
 
 module.exports = router;
