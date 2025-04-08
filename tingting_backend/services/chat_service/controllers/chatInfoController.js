@@ -291,30 +291,30 @@ module.exports = {
     deleteChatHistoryForMe: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const userId = req.body.userId;
-
-            console.log(`Xóa lịch sử trò chuyện với ID: ${chatId}`);
-            console.log("User ID từ token:", userId); 
-            // Kiểm tra nếu không có userId
+            const { userId } = req.body;
+    
             if (!userId) {
                 return res.status(400).json({ error: "Thiếu userId!" });
             }
-            
     
-            console.log(`User ${userId} xóa lịch sử chat ${chatId} chỉ ở phía họ`);
+            const userIdStr = String(userId); // Ép kiểu để tránh lỗi
     
-            // Cập nhật tất cả tin nhắn trong cuộc trò chuyện đó
-            await Message.updateMany(
+            const result = await Message.updateMany(
                 { conversationId: chatId },
-                { $addToSet: { deletedBy: userId } } // $addToSet tránh trùng lặp userId trong mảng
+                { $addToSet: { deletedBy: userIdStr } }
             );
     
-            res.json({ message: "Lịch sử trò chuyện đã bị ẩn khỏi tài khoản của bạn." });
+            res.json({ message: "Lịch sử trò chuyện đã bị xóa khỏi tài khoản của bạn." });
         } catch (error) {
-            console.error("Lỗi khi xóa lịch sử trò chuyện:", error);
-            res.status(500).json({ error: error.message });
+            console.error("Lỗi khi xóa lịch sử trò chuyện:", {
+                message: error.message,
+                stack: error.stack
+            });
+            res.status(500).json({ error: "Lỗi server nội bộ.", details: error.message });
         }
     }
+    
+    
     
     
 };
