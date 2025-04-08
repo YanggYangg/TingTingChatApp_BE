@@ -8,7 +8,7 @@ module.exports = {
         try {
             const { chatId } = req.params;
             console.log(` Lấy thông tin chat với ID: ${chatId}`);
-            const chat = await Conversation.findById(chatId).populate('participants.userId', 'name avatar');
+            const chat = await Conversation.findById(chatId).populate('participants.userId');
             if (!chat) {
                 console.log(` Chat ID ${chatId} không tồn tại`);
                 return res.status(404).json({ message: 'Chat không tồn tại' });
