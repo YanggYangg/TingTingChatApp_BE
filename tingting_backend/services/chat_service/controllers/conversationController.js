@@ -2,13 +2,13 @@ const Conversation = require('../models/Conversation');
 
 module.exports = {
     getAllConversations: async (req, res) => {
-        try{
+        try {
             const conversations = await Conversation.find();
-            console.log("=====Test console Conversations=====:",conversations);
+            console.log("=====Test console Conversations=====:", conversations);
             res.status(200).json(conversations);
-        }catch(error){
+        } catch (error) {
             cónsole.log("=====Khong get duoc Conversations=====");
-            res.status(500).json({message: "Error when get all conversations"});
+            res.status(500).json({ message: "Error when get all conversations" });
         }
     }
 };
