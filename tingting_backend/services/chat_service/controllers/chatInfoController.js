@@ -26,7 +26,7 @@ module.exports = {
             const { chatId } = req.params;
             console.log(`Lấy danh sách thành viên trong nhóm chat ${chatId}`);
 
-            const chat = await Conversation.findById(chatId).populate('participants.userId', 'name avatar email');
+            const chat = await Conversation.findById(chatId).populate('participants.userId');
 
             if (!chat) {
                 console.log(`Không tìm thấy nhóm với ID: ${chatId}`);
@@ -80,7 +80,7 @@ module.exports = {
             const { userId } = req.body;
 
             console.log(`Xóa user ${userId} khỏi chat ${chatId}`);
-            console.log("Body nhận được:", req.body); // Kiểm tra dữ liệu gửi lên
+            console.log("Body nhận được:", req.body); 
 
             // Kiểm tra nếu không có userId
             if (!userId) {
