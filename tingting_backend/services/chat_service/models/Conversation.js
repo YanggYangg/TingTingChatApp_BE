@@ -31,6 +31,7 @@ const conversationSchema = new mongoose.Schema({
                 type: Boolean,
                 default: false,
             },
+            pin: { type: String }, // Lưu mã PIN đã băm
         },
     ],
     lastMessage: {
