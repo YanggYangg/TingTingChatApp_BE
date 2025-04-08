@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const conversationSchema = new mongoose.Schema({
-
     name: {
         type: String,
     },
@@ -17,19 +16,18 @@ const conversationSchema = new mongoose.Schema({
     },
     participants: [
         {
-            // userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             userId: { type: String, required: true },
             role: { type: String }, // chỉ có khi isGroup = true
+            mute: {
+                type: String,
+                enum: ['1h', '4h', '8am', 'forever', null],
+                default: null,
+            },
         },
     ],
     lastMessage: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Message',
-    },
-    mute: {
-        type: String,
-        enum: ['1h', '4h', '8am', 'forever', null], // Cho phép giá trị null khi không tắt thông báo
-        default: null,
     },
     isHidden: {
         type: Boolean,
@@ -49,5 +47,4 @@ const conversationSchema = new mongoose.Schema({
     },
 });
 
-module.exports =
-    mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema);
+module.exports = mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema);

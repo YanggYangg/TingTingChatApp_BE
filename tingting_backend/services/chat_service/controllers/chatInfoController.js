@@ -90,7 +90,7 @@ module.exports = {
             // Xóa userId khỏi danh sách participants
             const chat = await Conversation.findByIdAndUpdate(
                 chatId,
-                { $pull: { participants: { userId: userId } } }, // Sửa điều kiện $pull
+                { $pull: { participants: { userId: userId } } },
                 { new: true }
             );
 
@@ -225,21 +225,46 @@ module.exports = {
     updateNotification: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const { mute } = req.body;
-
-            console.log(`Cập nhật trạng thái thông báo nhóm ${chatId} thành ${mute}`);
-
-            const chat = await Conversation.findByIdAndUpdate(
-                chatId,
-                { mute: mute },
+            const { userId, mute } = req.body;
+    
+            console.log(`Cập nhật trạng thái thông báo của người dùng ${userId} trong nhóm ${chatId} thành ${mute}`);
+    
+            const chat = await Conversation.findOneAndUpdate(
+                { _id: chatId, 'participants.userId': userId },
+                { $set: { 'participants.$.mute': mute } },
                 { new: true }
             );
-
+    
             console.log(`Chat sau khi cập nhật trạng thái thông báo:`, chat);
             res.json(chat);
         } catch (error) {
             console.log(`Lỗi khi cập nhật trạng thái thông báo nhóm:`, error);
             res.status(500).json({ error: error.message });
+        }
+    },
+    updateNotification: async (req, res) => {
+        try {
+            const { chatId } = req.params; // Lấy ID cuộc trò chuyện từ tham số
+            const { userId, mute } = req.body; // Lấy userId và trạng thái mute từ body yêu cầu
+    
+            console.log(`Cập nhật trạng thái thông báo của người dùng ${userId} trong nhóm ${chatId} thành ${mute}`);
+    
+            // Cập nhật trạng thái mute cho người dùng cụ thể trong participants
+            const chat = await Conversation.findOneAndUpdate(
+                { _id: chatId, 'participants.userId': userId }, // Tìm cuộc trò chuyện và người dùng
+                { $set: { 'participants.$.mute': mute } }, // Cập nhật trạng thái mute
+                { new: true } // Trả về tài liệu đã được cập nhật
+            );
+    
+            if (!chat) {
+                return res.status(404).json({ message: "Cuộc trò chuyện không tìm thấy!" });
+            }
+    
+            console.log(`Chat sau khi cập nhật trạng thái thông báo:`, chat);
+            res.json(chat); // Trả về thông tin cuộc trò chuyện đã cập nhật
+        } catch (error) {
+            console.log(`Lỗi khi cập nhật trạng thái thông báo nhóm:`, error);
+            res.status(500).json({ error: error.message }); // Trả về lỗi nếu có
         }
     },
     // Ẩn trò chuyện
