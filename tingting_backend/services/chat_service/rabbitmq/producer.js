@@ -1,24 +1,23 @@
-const amqp = require("amqplib");
+const amqp = require('amqplib');
 
-async function sendMessageToQueue(notificationData) {
-  try {
-    const connection = await amqp.connect("amqp://localhost");
+const RABBITMQ_URL = 'amqp://localhost';
+const QUEUE_NAME = 'chat_notifications';
+
+async function sendMessageToQueue(message){
+  try{
+    const connection = await amqp.connect(RABBITMQ_URL);
     const channel = await connection.createChannel();
-    const queue = "notification_queue";
+    await channel.assertQueue(QUEUE_NAME, { durable: true });
 
-    await channel.assertQueue(queue, { durable: true });
-
-    channel.sendToQueue(queue, Buffer.from(JSON.stringify(notificationData)), {
-      persistent: true,
-    });
-
-    console.log("📩 Đã gửi message vào queue:", notificationData);
+    channel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(message)), { persistent: true });
+    console.log("Message sent to queue:", message);
 
     setTimeout(() => {
       connection.close();
-    }, 500);
-  } catch (error) {
-    console.error("❌ Lỗi khi gửi message vào queue:", error);
+    }
+    , 500);
+  }catch (error) {
+    console.error("Error sending message to queue:", error);
   }
 }
 

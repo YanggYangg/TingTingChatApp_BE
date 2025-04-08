@@ -9,7 +9,7 @@ module.exports = {
             console.log("=====Test console Messages=====:",messages);
             res.status(200).json(messages);
         }catch(error){
-            cónsole.log("=====Khong get duoc Messages=====");
+            console.log("=====Khong get duoc Messages=====");
             res.status(500).json({message: "Error when get all messages"});
         }
     },
@@ -36,41 +36,35 @@ module.exports = {
             res.status(500).json({ message: "Error when get messages by conversationId" });
         }
     },
-    sendMessage: async (req, res) => {
-        try{
-            const { userId, conversationId, messageId, content } = req.body;
-        if (!userId || !conversationId || !content) {
-            return res.status(400).json({ error: "Missing required fields" });
-        }
-        //Save in DB
+   sendMessage: async (req, res) => {
+    try{
+        const { conversationId, userId, content, messageType } = req.body;
+
         const newMessage = new Message({
-            userId,
             conversationId,
+            userId,
             content,
-            createdAt: new Date(),
+            messageType,
         });
         await newMessage.save();
 
-        //Send to RabbitMQ
-        const notificationData = {
+        //gửi tn vào rabbitMQ
+        sendMessageToQueue({
             userId,
             conversationId,
-            messageId: newMessage._id, // ID của tin nhắn vừa lưu
-            typeNotice: "new_message",
+            messageId: newMessage._id,
             content,
-            isRead: false,
-            createdAt: new Date(),
-        };
-        await sendMessageToQueue(notificationData);//Send to queue
-        
-        res.status(200).json({
-            message: "Message sent and notification queued!",
-            data: newMessage,
-          });
-    }catch (error) {
-        console.error("Error sending message:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-      }
-    }
+        });
 
+        res.status(201).json({ 
+            success: true, 
+            message: 'Message sent', 
+            data: newMessage });
+    }catch(error) {
+        console.log(error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal Server Error' });
+    }
+}
 };

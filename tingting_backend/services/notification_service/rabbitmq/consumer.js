@@ -1,23 +1,45 @@
-const amqp = require("amqplib");
-const Notification = require("../models/Notification");
+const amqp = require('amqplib');
+const mongoose = require('mongoose');
+const connectDB = require('../configs/db');
+const Notification = require('../models/Notification');
 
-async function receiveMessages() {
-  const connection = await amqp.connect("amqp://localhost");
-  const channel = await connection.createChannel();
-  const queue = "notification_queue";
+const RABBITMQ_URL = 'amqp://localhost';
+const QUEUE_NAME = 'chat_notifications';
 
-  await channel.assertQueue(queue, { durable: true });
-  console.log("Waiting for notifications...");
+async function consumeMessages() {
+  try{
+    await connectDB();
+    console.log("MongoDB connected in consumer.");
 
-  channel.consume(queue, async (msg) => {
-    if (msg !== null) {
-      const notificationData = JSON.parse(msg.content.toString());
-      console.log("Received notification:", notificationData);
+    const connection = await amqp.connect(RABBITMQ_URL);
+    const channel = await connection.createChannel();
+    await channel.assertQueue(QUEUE_NAME, { durable: true });
 
-      await Notification.create(notificationData);
-      channel.ack(msg);
-    }
-  });
+    console.log("Waiting for messages in queue:");
+
+    channel.consume(QUEUE_NAME, async (msg) => {
+      if(msg !== null) {
+        const messageData = JSON.parse(msg.content.toString());
+        console.log("Received message:", messageData);
+
+
+        //Save DB
+        const notification = new Notification({
+          userId: messageData.userId,
+          conversationId: messageData.conversationId,
+          messageId: messageData.messageId,
+          typeNotice: 'new_message',
+          content: messageData.content,
+        });
+        await notification.save();
+        console.log("Notification saved to database:");
+        channel.ack(msg);
+      }
+    }, {
+      noAck: false,
+    });
+  }catch (error) {
+    console.error("Error consuming messages from queue:", error);
+  }
 }
-
-receiveMessages();
+consumeMessages();

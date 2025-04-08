@@ -4,62 +4,55 @@ const Conversation = require('./models/Conversation');
 const Message = require('./models/Message'); 
 dotenv.config();
 
-// const conversations = [
-//     {
-//         avatar: "https://example.com/avatar1.jpg",
-//         name: "Nhóm Lập Trình",
-//         isGroup: true,
-//         participants: [
-//             { userId: "6601a1b2c3d4e5f678901234", role: "admin" },
-//             { userId: "6601a1b2c3d4e5f678901235", role: "member" }
-//         ],
-//         lastMessage: "6602b2c3d4e5f67890123678",
-//         createAt: new Date(),
-//         updateAt: new Date()
-//     },
-//     {
-//         avatar: "https://example.com/avatar2.jpg",
-//         name: "",
-//         isGroup: false,
-//         participants: [
-//             { userId: "6601a1b2c3d4e5f678901236" },
-//             { userId: "6601a1b2c3d4e5f678901237" }
-//         ],
-//         lastMessage: "6602b2c3d4e5f67890123679",
-//         createAt: new Date(),
-//         updateAt: new Date()
-//     }
-// ];
-
-const messages = [
+const conversations = [
     {
-        conversationId: new mongoose.Types.ObjectId(),
-        sender: [
-            {
-                userId: "65ffabcd9876def012345678",
-                content: "Xin chào!",
-                messageType: "text",
-                status: "sent",
-                time: new Date()
-            }
+        _id: new mongoose.Types.ObjectId(),
+        name: "Nhóm Công Nghệ",
+        isGroup: true,
+        linkGroup: "https://groupchat.com/tech",
+        imageGroup: "https://imageurl.com/techgroup.png",
+        participants: [
+            { userId: "6601a1b2c3d4e5f678901238", role: "admin" },
+            { userId: "6601a1b2c3d4e5f678901239", role: "member" }
         ],
-        createdAt: new Date()
+        lastMessage: null,
+        createAt: new Date(),
+        updateAt: new Date()
     },
     {
-        conversationId: new mongoose.Types.ObjectId(),
-        sender: [
-            {
-                userId: "user456",
-                content: "file123.pdf",
-                messageType: "file",
-                status: "received",
-                time: new Date()
-            }
+        _id: new mongoose.Types.ObjectId(),
+        name: "Chat Cá Nhân",
+        isGroup: false,
+        participants: [
+            { userId: "6601a1b2c3d4e5f678901240" },
+            { userId: "6601a1b2c3d4e5f678901241" }
         ],
-        createdAt: new Date()
+        lastMessage: null,
+        createAt: new Date(),
+        updateAt: new Date()
     }
 ];
 
+const messages = [
+    {
+        conversationId: conversations[0]._id,
+        userId: "6601a1b2c3d4e5f678901238",
+        content: "Chào mừng mọi người!",
+        messageType: "text",
+        linkURL: null,
+        status: { sent: true, receivedBy: [], readBy: [] },
+        createdAt: new Date()
+    },
+    {
+        conversationId: conversations[1]._id,
+        userId: "6601a1b2c3d4e5f678901240",
+        content: "Hôm nay bạn thế nào?",
+        messageType: "text",
+        linkURL: null,
+        status: { sent: true, receivedBy: [], readBy: [] },
+        createdAt: new Date()
+    }
+];
 
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -67,11 +60,11 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .then(async () => {
     console.log("Kết nối MongoDB thành công!");
-    // await Conversation.deleteMany();
-    // await Conversation.insertMany(conversations);
+    await Conversation.deleteMany();
+    await Message.deleteMany();
+    await Conversation.insertMany(conversations);
     await Message.insertMany(messages);
     console.log("Dữ liệu đã được thêm thành công!");
-
     mongoose.connection.close();
 })
 .catch(err => console.error("Lỗi kết nối MongoDB:", err));
