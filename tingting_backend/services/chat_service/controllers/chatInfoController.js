@@ -271,13 +271,18 @@ module.exports = {
     hideChat: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const { isHidden } = req.body;
-            console.log(`Cập nhật trạng thái ẩn nhóm ${chatId} thành ${isHidden}`);
-            const chat = await Conversation.findByIdAndUpdate(
-                chatId,
-                { isHidden: isHidden },
+            const { userId, isHidden } = req.body;
+            console.log(`Cập nhật trạng thái ẩn nhóm cho người dùng ${userId} trong nhóm ${chatId} thành ${isHidden}`);
+
+            const chat = await Conversation.findOneAndUpdate(
+                { _id: chatId, 'participants.userId': userId },
+                { $set: { 'participants.$.isHidden': isHidden } },
                 { new: true }
             );
+
+            if (!chat) {
+                return res.status(404).json({ message: "Cuộc trò chuyện không tìm thấy!" });
+            }
             console.log(`Chat sau khi cập nhật trạng thái ẩn:`, chat);
             res.json(chat);
         } catch (error) {

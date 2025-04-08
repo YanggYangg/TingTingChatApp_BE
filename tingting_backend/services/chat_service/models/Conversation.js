@@ -23,19 +23,19 @@ const conversationSchema = new mongoose.Schema({
                 enum: ['1h', '4h', '8am', 'forever', null],
                 default: null,
             },
+            isHidden: {
+                type: Boolean,
+                default: false,
+            },
+            isPinned: {
+                type: Boolean,
+                default: false,
+            },
         },
     ],
     lastMessage: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Message',
-    },
-    isHidden: {
-        type: Boolean,
-        default: false,
-    },
-    isPinned: {
-        type: Boolean,
-        default: false,
     },
     createAt: {
         type: Date,
