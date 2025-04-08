@@ -4,7 +4,7 @@ const Message = require('../models/Message');
 module.exports = {
     // Lấy thông tin nhóm/chat
     getChatInfo: async (req, res) => {
-        console.log(`🔎 Lấy thông tin chat`);
+        console.log(`Lấy thông tin chat`);
         try {
             const { chatId } = req.params;
             console.log(` Lấy thông tin chat với ID: ${chatId}`);
