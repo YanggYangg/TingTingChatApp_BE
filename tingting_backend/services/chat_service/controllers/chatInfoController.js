@@ -1,5 +1,6 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
+const bcrypt = require('bcrypt');
 
 module.exports = {
     // Lấy thông tin nhóm/chat
@@ -180,21 +181,20 @@ module.exports = {
     pinChat: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const { isPinned } = req.body;
-    
-            console.log("Request body:", req.body);
-    
+            const { isPinned , userId } = req.body;
+
+            console.log(`Ghim nhóm ${chatId} với trạng thái ${isPinned} cho người dùng ${userId}`);
             if (!req.body || typeof isPinned !== 'boolean') {
                 return res.status(400).json({ message: 'Invalid request body. isPinned must be a boolean.' });
             }
     
             console.log(`Cập nhật trạng thái ghim nhóm ${chatId} thành ${isPinned}`);
-            const chat = await Conversation.findByIdAndUpdate(
-                chatId,
-                { isPinned: isPinned },
+            const chat = await Conversation.findOneAndUpdate(
+                { _id: chatId, 'participants.userId': userId },
+                { $set: { 'participants.$.isPinned': isPinned } },
                 { new: true }
             );
-    
+                
             console.log(`Chat sau khi cập nhật trạng thái ghim:`, chat);
     
             if (!chat) {
@@ -271,22 +271,36 @@ module.exports = {
     hideChat: async (req, res) => {
         try {
             const { chatId } = req.params;
-            const { userId, isHidden } = req.body;
-            console.log(`Cập nhật trạng thái ẩn nhóm cho người dùng ${userId} trong nhóm ${chatId} thành ${isHidden}`);
+            const { userId, isHidden, pin } = req.body;
 
-            const chat = await Conversation.findOneAndUpdate(
-                { _id: chatId, 'participants.userId': userId },
-                { $set: { 'participants.$.isHidden': isHidden } },
-                { new: true }
-            );
-
-            if (!chat) {
-                return res.status(404).json({ message: "Cuộc trò chuyện không tìm thấy!" });
+            if (!userId) {
+                return res.status(400).json({ error: "Thiếu userId" });
             }
-            console.log(`Chat sau khi cập nhật trạng thái ẩn:`, chat);
+
+            const chat = await Conversation.findById(chatId);
+            if (!chat) {
+                return res.status(404).json({ error: "Không tìm thấy cuộc trò chuyện" });
+            }
+
+            const participant = chat.participants.find(p => p.userId === userId);
+            if (!participant) {
+                return res.status(404).json({ error: "Người dùng không thuộc cuộc trò chuyện này" });
+            }
+
+            participant.isHidden = isHidden;
+            if (isHidden && pin) {
+                const saltRounds = 10;
+                participant.pin = await bcrypt.hash(pin, saltRounds); // Băm mã PIN
+            } else if (!isHidden) {
+                participant.pin = null; // Xóa mã PIN khi hiện lại
+            }
+
+            chat.updateAt = Date.now();
+            await chat.save();
+
             res.json(chat);
         } catch (error) {
-            console.log(`Lỗi khi cập nhật trạng thái ẩn nhóm:`, error);
+            console.error("Lỗi khi ẩn/hiện trò chuyện:", error);
             res.status(500).json({ error: error.message });
         }
     },
