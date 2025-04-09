@@ -22,24 +22,9 @@ export const signUp = async (req, res, next) => {
       error.statusCode = 409;
       throw error;
     }
-    
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = await User.create([
-      {
-        phone,
-        password: hashedPassword,
-        email,
-      },
-    ]);
-    const { day, month, year } = req.body;
-    const dateOfBirth = new Date(year, month - 1, day + 1);
-    console.log(dateOfBirth);
-
     const profile = {
       ...req.body,
-      dateOfBirth,
+
     };
     const response = await axios.post(
       "http://localhost:3001/api/v1/profile",
@@ -51,6 +36,17 @@ export const signUp = async (req, res, next) => {
       throw error;
     }
     const userProfile = response.data;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create([
+      {
+        phone,
+        password: hashedPassword,
+        email,
+        userId: userProfile.data.profile[0]._id
+      },
+    ]);
 
     res.status(201).json({
       status: "success",
