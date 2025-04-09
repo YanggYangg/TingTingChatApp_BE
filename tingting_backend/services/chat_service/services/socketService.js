@@ -1,4 +1,5 @@
 let io = null;
+const Message = require('../models/Message');
 const userSocketMap = {}; // {userId: socketId}
 const userConversationMap = {}; // {userId: [conversationIds]}
 
@@ -35,6 +36,7 @@ function handleConnection(socket) {
     socket.on("typing", (data) => handleTyping(socket, data, userId));
     socket.on("stopTyping", (data) => handleStopTyping(socket, data, userId));
     socket.on("sendMessage", (data) => handleSendMessage(socket, data, userId));
+    socket.on("readMessage", (data) => handleReadMessage(socket, data, userId));
 }
 
 function handleDisconnect(socket, userId) {
@@ -47,7 +49,7 @@ function handleDisconnect(socket, userId) {
     console.log("Online users updated:", Object.keys(userSocketMap));
 }
 
-function handleJoinConversation(socket, { conversationId }, userId) {
+async function handleJoinConversation(socket, { conversationId }, userId) {
     if (!conversationId) return;
     socket.join(conversationId);
 
@@ -60,11 +62,25 @@ function handleJoinConversation(socket, { conversationId }, userId) {
         }
     }
 
-    console.log(`User ${userId} joined conversation ${conversationId}`);
-    socket.emit("joined", { conversationId });
+    try {
+        // Load messages for this conversation
+        const messages = await Message.find({ conversationId })
+            .sort({ createdAt: 1 })
+            .lean();
+
+        // Send messages to the user who just joined
+        socket.emit("loadMessages", messages);
+        console.log(`Loaded ${messages.length} messages for conversation ${conversationId}`);
+
+        console.log(`User ${userId} joined conversation ${conversationId}`);
+        socket.emit("joined", { conversationId });
+    } catch (error) {
+        console.error("Error loading messages:", error);
+        socket.emit("error", { message: "Failed to load messages", error: error.message });
+    }
 }
 
-function handleSendMessage(socket, { conversationId, message }, userId) {
+async function handleSendMessage(socket, { conversationId, message }, userId) {
     if (!conversationId || !message) {
         return socket.emit("error", { message: "Invalid message data" });
     }
@@ -78,7 +94,7 @@ function handleSendMessage(socket, { conversationId, message }, userId) {
     }
 
     try {
-        const newMessage = {
+        const newMessage = new Message({
             conversationId,
             userId,
             content: message.content?.trim() || "",
@@ -90,7 +106,11 @@ function handleSendMessage(socket, { conversationId, message }, userId) {
                 readBy: []
             },
             createdAt: new Date()
-        };
+        });
+
+        // Save message to database
+        await newMessage.save();
+        console.log(`Message saved to database: ${newMessage._id}`);
 
         // Emit to all users in the conversation except the sender
         socket.to(conversationId).emit("receiveMessage", newMessage);
@@ -113,6 +133,39 @@ function handleTyping(socket, { conversationId }, userId) {
 function handleStopTyping(socket, { conversationId }, userId) {
     if (!conversationId || !userId) return;
     socket.to(conversationId).emit("userStopTyping", { userId, conversationId });
+}
+
+async function handleReadMessage(socket, { conversationId, messageId }, userId) {
+    if (!conversationId || !messageId || !userId) {
+        return socket.emit("error", { message: "Invalid read message data" });
+    }
+
+    try {
+        // Tìm tin nhắn trong database
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return socket.emit("error", { message: "Message not found" });
+        }
+
+        // Kiểm tra xem user đã đọc tin nhắn chưa
+        if (!message.status.readBy.includes(userId)) {
+            // Thêm userId vào danh sách đã đọc
+            message.status.readBy.push(userId);
+            await message.save();
+
+            // Thông báo cho tất cả user trong conversation biết tin nhắn đã được đọc
+            io.to(conversationId).emit("messageRead", {
+                messageId,
+                userId,
+                readBy: message.status.readBy
+            });
+
+            console.log(`User ${userId} read message ${messageId} in conversation ${conversationId}`);
+        }
+    } catch (error) {
+        console.error("Error handling read message:", error);
+        socket.emit("error", { message: "Failed to mark message as read", error: error.message });
+    }
 }
 
 // Socket service methods
