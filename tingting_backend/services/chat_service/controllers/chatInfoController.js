@@ -48,37 +48,57 @@ module.exports = {
         const { conversationId } = req.params;
 
         if (!conversationId) {
-          return res.status(400).json({ message: 'Thiếu conversationId trong params' });
+          return res.status(400).json({ message: "Thiếu conversationId trong params" });
         }
       
         try {
-          // Lấy nhóm theo ID và populate participants
-          const conversation = await Conversation.findById(conversationId).populate('participants.userId');
+          // 1. Lấy conversation và populate participant.userId
+          const conversation = await Conversation.findById(conversationId).populate("participants.userId");
           if (!conversation) {
-            return res.status(404).json({ message: 'Nhóm không tồn tại' });
+            return res.status(404).json({ message: "Không tìm thấy cuộc trò chuyện" });
           }
       
-          // Lấy danh sách userId đã tham gia nhóm (nếu userId tồn tại)
-          const currentParticipantIds = conversation.participants
-            .map(p => p?.userId?._id?.toString()) // dùng optional chaining để tránh undefined
-            .filter(Boolean); // loại bỏ undefined/null
+          // 2. Lấy danh sách userID đã tham gia
+          const currentParticipantIDs = conversation.participants
+            .map(p => p?.userId?.userID) // đảm bảo đúng trường
+            .filter(Boolean);
       
-          // Gọi mock API từ user-service
-          const response = await axios.get('http://localhost:3000/api/users');
-          const allUsers = response.data || [];
+          // 3. Gọi API lấy toàn bộ users và profiles
+          const [userRes, profileRes] = await Promise.all([
+            axios.get("http://localhost:3000/api/users"),
+            axios.get("http://localhost:3000/api/profiles")
+          ]);
       
-          // Lọc ra những người chưa tham gia
-          const availableMembers = allUsers.filter(user => {
-            return !currentParticipantIds.includes(user?.id?.toString());
+          const allUsers = userRes.data || [];
+          const allProfiles = profileRes.data || [];
+      
+          // 4. Merge profile vào user theo userID
+          const usersWithProfiles = allUsers.map(user => {
+            const profile = allProfiles.find(p => p.userID === user.userID);
+            return {
+              ...user,
+              firstName: profile?.firstName || "",
+              lastName: profile?.lastName || "",
+              image: profile?.image || "",
+              numberPhone: profile?.numberPhone || "",
+              gender: profile?.gender || "",
+              profileID: profile?.profileID || ""
+            };
+          });
+      
+          // 5. Lọc ra những user chưa tham gia
+          const availableMembers = usersWithProfiles.filter(user => {
+            return !currentParticipantIDs.includes(user.userID);
           });
       
           return res.json(availableMembers);
         } catch (error) {
-          console.error('Lỗi khi lấy danh sách thành viên khả dụng:', error);
-          return res.status(500).json({ error: 'Lỗi server khi lấy danh sách thành viên khả dụng' });
+          console.error("Lỗi khi lấy danh sách thành viên khả dụng:", error.message);
+          return res.status(500).json({ error: "Lỗi server khi lấy danh sách thành viên khả dụng" });
         }
       },
 
+   
     // Cập nhật tên nhóm
     updateChatName: async (req, res) => {
         try {
