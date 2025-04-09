@@ -7,11 +7,11 @@ module.exports = {
     getChatInfo: async (req, res) => {
         console.log(`Lấy thông tin chat`);
         try {
-            const { chatId } = req.params;
-            console.log(` Lấy thông tin chat với ID: ${chatId}`);
-            const chat = await Conversation.findById(chatId).populate('participants.userId');
+            const { conversationId } = req.params;
+            console.log(` Lấy thông tin chat với ID: ${conversationId}`);
+            const chat = await Conversation.findById(conversationId).populate('participants.userId');
             if (!chat) {
-                console.log(` Chat ID ${chatId} không tồn tại`);
+                console.log(` Chat ID ${conversationId} không tồn tại`);
                 return res.status(404).json({ message: 'Chat không tồn tại' });
             }
             console.log(` Dữ liệu chat:`, chat);
@@ -24,13 +24,13 @@ module.exports = {
     // Lấy danh sách thành viên trong nhóm chat (Không cần thiết)
     getParticipants: async (req, res) => {
         try {
-            const { chatId } = req.params;
-            console.log(`Lấy danh sách thành viên trong nhóm chat ${chatId}`);
+            const { conversationId } = req.params;
+            console.log(`Lấy danh sách thành viên trong nhóm chat ${conversationId}`);
 
-            const chat = await Conversation.findById(chatId).populate('participants.userId');
+            const chat = await Conversation.findById(conversationId).populate('participants.userId');
 
             if (!chat) {
-                console.log(`Không tìm thấy nhóm với ID: ${chatId}`);
+                console.log(`Không tìm thấy nhóm với ID: ${conversationId}`);
                 return res.status(404).json({ message: 'Nhóm không tồn tại' });
             }
 
@@ -46,12 +46,12 @@ module.exports = {
     // Cập nhật tên nhóm
     updateChatName: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { name } = req.body;
-            console.log(`Cập nhật tên chat với ID: ${chatId}`);
+            console.log(`Cập nhật tên chat với ID: ${conversationId}`);
             console.log(`Tên mới:`, name);
 
-            const updatedChat = await Conversation.findByIdAndUpdate(chatId, { name }, { new: true });
+            const updatedChat = await Conversation.findByIdAndUpdate(conversationId, { name }, { new: true });
             console.log(` Chat sau khi cập nhật:`, updatedChat);
             res.json(updatedChat);
         } catch (error) {
@@ -63,10 +63,10 @@ module.exports = {
     // Thêm thành viên vào nhóm
     addParticipant: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { userId, role } = req.body;
-            console.log(` Thêm user ${userId} với vai trò ${role} vào chat ${chatId}`);
-            const chat = await Conversation.findByIdAndUpdate(chatId, { $push: { participants: { userId, role } } }, { new: true });
+            console.log(` Thêm user ${userId} với vai trò ${role} vào chat ${conversationId}`);
+            const chat = await Conversation.findByIdAndUpdate(conversationId, { $push: { participants: { userId, role } } }, { new: true });
             console.log(` Chat sau khi thêm thành viên:`, chat);
             res.json(chat);
         } catch (error) {
@@ -77,10 +77,10 @@ module.exports = {
 
     removeParticipant: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { userId } = req.body;
 
-            console.log(`Xóa user ${userId} khỏi chat ${chatId}`);
+            console.log(`Xóa user ${userId} khỏi chat ${conversationId}`);
             console.log("Body nhận được:", req.body); 
 
             // Kiểm tra nếu không có userId
@@ -90,13 +90,13 @@ module.exports = {
 
             // Xóa userId khỏi danh sách participants
             const chat = await Conversation.findByIdAndUpdate(
-                chatId,
+                conversationId,
                 { $pull: { participants: { userId: userId } } },
                 { new: true }
             );
 
             if (!chat) {
-                console.error(`Không tìm thấy chat với ID: ${chatId}`);
+                console.error(`Không tìm thấy chat với ID: ${conversationId}`);
                 return res.status(404).json({ error: "Chat không tồn tại." });
             }
 
@@ -110,11 +110,11 @@ module.exports = {
     // Thay đổi vai trò của thành viên
     changeParticipantRole: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { userId, role } = req.body;
-            console.log(`Thay đổi vai trò của user ${userId} thành ${role} trong chat ${chatId}`);
+            console.log(`Thay đổi vai trò của user ${userId} thành ${role} trong chat ${conversationId}`);
 
-            const chat = await Conversation.findOneAndUpdate({ _id: chatId, 'participants.userId': userId }, { $set: { 'participants.$.role': role } }, { new: true });
+            const chat = await Conversation.findOneAndUpdate({ _id: conversationId, 'participants.userId': userId }, { $set: { 'participants.$.role': role } }, { new: true });
             console.log(` Chat sau khi thay đổi vai trò:`, chat);
 
             res.json(chat);
@@ -128,13 +128,13 @@ module.exports = {
     // Lấy danh sách ảnh/video đã gửi trong nhóm
     getChatMedia: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const media = await Message.find({
-                conversationId: chatId,
+                conversationId: conversationId,
                 messageType: { $in: ['image', 'video'] }
             });
 
-            console.log(`Lấy danh sách media trong chat ${chatId}:`, media);
+            console.log(`Lấy danh sách media trong chat ${conversationId}:`, media);
             res.json(media.length ? media : []); // Trả về mảng rỗng nếu không có dữ liệu
         } catch (error) {
             console.error(`Lỗi khi lấy danh sách media:`, error);
@@ -145,13 +145,13 @@ module.exports = {
     // Lấy danh sách file đã gửi trong nhóm
     getChatFiles: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const files = await Message.find({
-                conversationId: chatId,
+                conversationId: conversationId,
                 messageType: 'file'
             });
 
-            console.log(`Lấy danh sách file trong chat ${chatId}:`, files);
+            console.log(`Lấy danh sách file trong chat ${conversationId}:`, files);
             res.json(files.length ? files : []);
         } catch (error) {
             console.error(`Lỗi khi lấy danh sách file:`, error);
@@ -162,13 +162,13 @@ module.exports = {
     // Lấy danh sách link đã gửi trong nhóm
     getChatLinks: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const links = await Message.find({
-                conversationId: chatId,
+                conversationId: conversationId,
                 messageType: 'link'
             });
 
-            console.log(`Lấy danh sách link trong chat ${chatId}:`, links);
+            console.log(`Lấy danh sách link trong chat ${conversationId}:`, links);
             res.json(links.length ? links : []);
         } catch (error) {
             console.error(`Lỗi khi lấy danh sách link:`, error);
@@ -180,17 +180,17 @@ module.exports = {
     // Ghim cuộc trò chuyện
     pinChat: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { isPinned , userId } = req.body;
 
-            console.log(`Ghim nhóm ${chatId} với trạng thái ${isPinned} cho người dùng ${userId}`);
+            console.log(`Ghim nhóm ${conversationId} với trạng thái ${isPinned} cho người dùng ${userId}`);
             if (!req.body || typeof isPinned !== 'boolean') {
                 return res.status(400).json({ message: 'Invalid request body. isPinned must be a boolean.' });
             }
     
-            console.log(`Cập nhật trạng thái ghim nhóm ${chatId} thành ${isPinned}`);
+            console.log(`Cập nhật trạng thái ghim nhóm ${conversationId} thành ${isPinned}`);
             const chat = await Conversation.findOneAndUpdate(
-                { _id: chatId, 'participants.userId': userId },
+                { _id: conversationId, 'participants.userId': userId },
                 { $set: { 'participants.$.isPinned': isPinned } },
                 { new: true }
             );
@@ -210,9 +210,9 @@ module.exports = {
     // Lấy danh sách nhắc hẹn trong nhóm
     getReminders: async (req, res) => {
         try {
-            const { chatId } = req.params;
-            console.log(` Lấy danh sách nhắc hẹn trong chat ${chatId}`);
-            const reminders = await Message.find({ conversationId: chatId, 'message.messageType': 'reminder' });
+            const { conversationId } = req.params;
+            console.log(` Lấy danh sách nhắc hẹn trong chat ${conversationId}`);
+            const reminders = await Message.find({ conversationId: conversationId, 'message.messageType': 'reminder' });
             console.log(` Danh sách nhắc hẹn:`, reminders);
             res.json(reminders);
         } catch (error) {
@@ -224,13 +224,13 @@ module.exports = {
     // Tắt/bật thông báo nhóm
     updateNotification: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { userId, mute } = req.body;
     
-            console.log(`Cập nhật trạng thái thông báo của người dùng ${userId} trong nhóm ${chatId} thành ${mute}`);
+            console.log(`Cập nhật trạng thái thông báo của người dùng ${userId} trong nhóm ${conversationId} thành ${mute}`);
     
             const chat = await Conversation.findOneAndUpdate(
-                { _id: chatId, 'participants.userId': userId },
+                { _id: conversationId, 'participants.userId': userId },
                 { $set: { 'participants.$.mute': mute } },
                 { new: true }
             );
@@ -244,14 +244,12 @@ module.exports = {
     },
     updateNotification: async (req, res) => {
         try {
-            const { chatId } = req.params; // Lấy ID cuộc trò chuyện từ tham số
+            const { conversationId } = req.params; // Lấy ID cuộc trò chuyện từ tham số
             const { userId, mute } = req.body; // Lấy userId và trạng thái mute từ body yêu cầu
-    
-            console.log(`Cập nhật trạng thái thông báo của người dùng ${userId} trong nhóm ${chatId} thành ${mute}`);
-    
+
             // Cập nhật trạng thái mute cho người dùng cụ thể trong participants
             const chat = await Conversation.findOneAndUpdate(
-                { _id: chatId, 'participants.userId': userId }, // Tìm cuộc trò chuyện và người dùng
+                { _id: conversationId, 'participants.userId': userId }, // Tìm cuộc trò chuyện và người dùng
                 { $set: { 'participants.$.mute': mute } }, // Cập nhật trạng thái mute
                 { new: true } // Trả về tài liệu đã được cập nhật
             );
@@ -270,14 +268,14 @@ module.exports = {
     // Ẩn trò chuyện
     hideChat: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { userId, isHidden, pin } = req.body;
 
             if (!userId) {
                 return res.status(400).json({ error: "Thiếu userId" });
             }
 
-            const chat = await Conversation.findById(chatId);
+            const chat = await Conversation.findById(conversationId);
             if (!chat) {
                 return res.status(404).json({ error: "Không tìm thấy cuộc trò chuyện" });
             }
@@ -334,7 +332,7 @@ module.exports = {
     // Xóa toàn bộ tin nhắn trong cuộc trò chuyện (phía người gửi)
     deleteChatHistoryForMe: async (req, res) => {
         try {
-            const { chatId } = req.params;
+            const { conversationId } = req.params;
             const { userId } = req.body;
     
             if (!userId) {
@@ -344,7 +342,7 @@ module.exports = {
             const userIdStr = String(userId); // Ép kiểu để tránh lỗi
     
             const result = await Message.updateMany(
-                { conversationId: chatId },
+                { conversationId: conversationId },
                 { $addToSet: { deletedBy: userIdStr } }
             );
     
