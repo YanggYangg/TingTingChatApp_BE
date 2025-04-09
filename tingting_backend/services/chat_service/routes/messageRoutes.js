@@ -7,13 +7,10 @@ const router = express.Router();
 router.get('/', getAllMessages);
 router.get('/:conversationId', getMessageByConversationId);
 
-// Lấy danh sách tin nhắn theo messageType và conversationId
-// router.get("/:conversationId/:messageType", getMessagesByTypeAndConversation);
-
-router.get('/:chatId/media', chatInfoController.getChatMedia);
-router.get('/:chatId/files', chatInfoController.getChatFiles);
-router.get('/:chatId/links', chatInfoController.getChatLinks);
-router.get('/:chatId/reminders', chatInfoController.getReminders);
+router.get('/:conversationId/media', chatInfoController.getChatMedia);
+router.get('/:conversationId/files', chatInfoController.getChatFiles);
+router.get('/:conversationId/links', chatInfoController.getChatLinks);
+router.get('/:conversationId/reminders', chatInfoController.getReminders);
 router.delete('/:messageId', chatInfoController.deleteMessageForMe);
 
 

@@ -5,23 +5,23 @@ const chatInfoController = require('../controllers/chatInfoController');
 
 router.get('/', getAllConversations);
 
-router.get('/:chatId', chatInfoController.getChatInfo);
-router.put('/:chatId', chatInfoController.updateChatName);
-router.get('/:chatId/participants', chatInfoController.getParticipants);
-router.post('/:chatId/participants', chatInfoController.addParticipant);
-router.delete('/:chatId/participants', chatInfoController.removeParticipant);
-router.put('/:chatId/participants/role', chatInfoController.changeParticipantRole); // Chưa
+router.get('/:conversationId', chatInfoController.getChatInfo);
+router.put('/:conversationId', chatInfoController.updateChatName);
+router.get('/:conversationId/participants', chatInfoController.getParticipants);
+router.post('/:conversationId/participants', chatInfoController.addParticipant);
+router.delete('/:conversationId/participants', chatInfoController.removeParticipant);
+router.put('/:conversationId/participants/role', chatInfoController.changeParticipantRole); // Chưa
 
 // Cập nhật trạng thái tắt/bật thông báo nhóm
-router.put('/:chatId/mute', chatInfoController.updateNotification);
+router.put('/:conversationId/mute', chatInfoController.updateNotification);
 
 // Cập nhật trạng thái ẩn/hiện cuộc trò chuyện
-router.put('/:chatId/hide', chatInfoController.hideChat);
+router.put('/:conversationId/hide', chatInfoController.hideChat);
 
 // Cập nhật trạng thái ghim nhóm
-router.put('/:chatId/pin', chatInfoController.pinChat);
+router.put('/:conversationId/pin', chatInfoController.pinChat);
 
 // Xóa toàn bộ cuộc trò chuyện phía tôi
-router.delete('/:chatId', chatInfoController.deleteChatHistoryForMe);
+router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
 
 module.exports = router;
