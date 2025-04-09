@@ -8,6 +8,7 @@ router.get('/', getAllConversations);
 router.get('/:conversationId', chatInfoController.getChatInfo);
 router.put('/:conversationId', chatInfoController.updateChatName);
 router.get('/:conversationId/participants', chatInfoController.getParticipants);
+
 router.post('/:conversationId/participants', chatInfoController.addParticipant);
 router.delete('/:conversationId/participants', chatInfoController.removeParticipant);
 router.put('/:conversationId/participants/role', chatInfoController.changeParticipantRole); // Chưa
@@ -26,5 +27,5 @@ router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
 
 // Danh sách nhóm chung
 router.get('/:conversationId/common', chatInfoController.getCommonGroups);
-
+router.get('/:conversationId/available', chatInfoController.getAvailableMembers);
 module.exports = router;

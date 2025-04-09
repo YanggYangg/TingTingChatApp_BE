@@ -1,6 +1,7 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const bcrypt = require('bcrypt');
+const axios = require('axios');
 
 module.exports = {
     // Lấy thông tin nhóm/chat
@@ -42,6 +43,41 @@ module.exports = {
         }
     },
 
+    // Lấy danh sách thành viên khả dụng để thêm vào nhóm
+    getAvailableMembers: async (req, res) => {
+        const { conversationId } = req.params;
+
+        if (!conversationId) {
+          return res.status(400).json({ message: 'Thiếu conversationId trong params' });
+        }
+      
+        try {
+          // Lấy nhóm theo ID và populate participants
+          const conversation = await Conversation.findById(conversationId).populate('participants.userId');
+          if (!conversation) {
+            return res.status(404).json({ message: 'Nhóm không tồn tại' });
+          }
+      
+          // Lấy danh sách userId đã tham gia nhóm (nếu userId tồn tại)
+          const currentParticipantIds = conversation.participants
+            .map(p => p?.userId?._id?.toString()) // dùng optional chaining để tránh undefined
+            .filter(Boolean); // loại bỏ undefined/null
+      
+          // Gọi mock API từ user-service
+          const response = await axios.get('http://localhost:3000/api/users');
+          const allUsers = response.data || [];
+      
+          // Lọc ra những người chưa tham gia
+          const availableMembers = allUsers.filter(user => {
+            return !currentParticipantIds.includes(user?.id?.toString());
+          });
+      
+          return res.json(availableMembers);
+        } catch (error) {
+          console.error('Lỗi khi lấy danh sách thành viên khả dụng:', error);
+          return res.status(500).json({ error: 'Lỗi server khi lấy danh sách thành viên khả dụng' });
+        }
+      },
 
     // Cập nhật tên nhóm
     updateChatName: async (req, res) => {
