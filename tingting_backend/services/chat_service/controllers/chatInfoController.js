@@ -354,9 +354,45 @@ module.exports = {
             });
             res.status(500).json({ error: "Lỗi server nội bộ.", details: error.message });
         }
-    }
+    },
     
+
+    // Nhóm chung của các user trong conversationId
+
+    getCommonGroups : async (req, res) => {
+        try {
+            const { conversationId } = req.params;
+            console.log(`Lấy danh sách nhóm chung với conversationId: ${conversationId}`);
     
+            // Lấy thông tin cuộc hội thoại hiện tại
+            const currentConversation = await Conversation.findById(conversationId).populate('participants.userId');
+            if (!currentConversation) {
+                console.log(`Cuộc hội thoại với ID ${conversationId} không tồn tại`);
+                return res.status(404).json({ message: 'Cuộc hội thoại không tồn tại' });
+            }
     
+            // Lấy danh sách userId từ participants
+            const participantIds = currentConversation.participants.map(p => p.userId.toString());
+            console.log(`Danh sách userId trong cuộc hội thoại:`, participantIds);
+    
+            // Tìm tất cả các nhóm mà tất cả participantIds cùng tham gia
+            const commonGroups = await Conversation.find({
+                _id: { $ne: conversationId }, // Loại trừ cuộc hội thoại hiện tại
+                isGroup: true, // Chỉ lấy các nhóm
+                'participants.userId': { $all: participantIds } // Tất cả userId phải có trong participants
+            }).populate('participants.userId'); // Populate để lấy đầy đủ thông tin user nếu cần
+    
+            console.log(`Danh sách nhóm chung:`, commonGroups);
+    
+            res.json({
+                currentConversation,
+                commonGroups // Trả về đầy đủ thông tin của các nhóm
+            });
+        } catch (error) {
+            console.error(`Lỗi khi lấy danh sách nhóm chung:`, error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
     
 };

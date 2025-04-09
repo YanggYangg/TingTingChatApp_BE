@@ -24,4 +24,7 @@ router.put('/:conversationId/pin', chatInfoController.pinChat);
 // Xóa toàn bộ cuộc trò chuyện phía tôi
 router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
 
+// Danh sách nhóm chung
+router.get('/:conversationId/common', chatInfoController.getCommonGroups);
+
 module.exports = router;
