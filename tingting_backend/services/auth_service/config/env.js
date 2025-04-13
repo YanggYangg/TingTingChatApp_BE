@@ -13,4 +13,6 @@ export const {
   EMAIL_PASS,
   SMTP_HOST,
   SMTP_PORT,
+  KEY_FREESMS,
+  DEVICE_NUMBER,
 } = process.env;
