@@ -48,57 +48,57 @@ module.exports = {
         const { conversationId } = req.params;
 
         if (!conversationId) {
-          return res.status(400).json({ message: "Thiếu conversationId trong params" });
+            return res.status(400).json({ message: "Thiếu conversationId trong params" });
         }
-      
-        try {
-          // 1. Lấy conversation và populate participant.userId
-          const conversation = await Conversation.findById(conversationId).populate("participants.userId");
-          if (!conversation) {
-            return res.status(404).json({ message: "Không tìm thấy cuộc trò chuyện" });
-          }
-      
-          // 2. Lấy danh sách userID đã tham gia
-          const currentParticipantIDs = conversation.participants
-            .map(p => p?.userId?.userID) // đảm bảo đúng trường
-            .filter(Boolean);
-      
-          // 3. Gọi API lấy toàn bộ users và profiles
-          const [userRes, profileRes] = await Promise.all([
-            axios.get("http://localhost:3000/api/users"),
-            axios.get("http://localhost:3000/api/profiles")
-          ]);
-      
-          const allUsers = userRes.data || [];
-          const allProfiles = profileRes.data || [];
-      
-          // 4. Merge profile vào user theo userID
-          const usersWithProfiles = allUsers.map(user => {
-            const profile = allProfiles.find(p => p.userID === user.userID);
-            return {
-              ...user,
-              firstName: profile?.firstName || "",
-              lastName: profile?.lastName || "",
-              image: profile?.image || "",
-              numberPhone: profile?.numberPhone || "",
-              gender: profile?.gender || "",
-              profileID: profile?.profileID || ""
-            };
-          });
-      
-          // 5. Lọc ra những user chưa tham gia
-          const availableMembers = usersWithProfiles.filter(user => {
-            return !currentParticipantIDs.includes(user.userID);
-          });
-      
-          return res.json(availableMembers);
-        } catch (error) {
-          console.error("Lỗi khi lấy danh sách thành viên khả dụng:", error.message);
-          return res.status(500).json({ error: "Lỗi server khi lấy danh sách thành viên khả dụng" });
-        }
-      },
 
-   
+        try {
+            // 1. Lấy conversation và populate participant.userId
+            const conversation = await Conversation.findById(conversationId).populate("participants.userId");
+            if (!conversation) {
+                return res.status(404).json({ message: "Không tìm thấy cuộc trò chuyện" });
+            }
+
+            // 2. Lấy danh sách userID đã tham gia
+            const currentParticipantIDs = conversation.participants
+                .map(p => p?.userId?.userID) // đảm bảo đúng trường
+                .filter(Boolean);
+
+            // 3. Gọi API lấy toàn bộ users và profiles
+            const [userRes, profileRes] = await Promise.all([
+                axios.get("http://localhost:3000/api/users"),
+                axios.get("http://localhost:3000/api/profiles")
+            ]);
+
+            const allUsers = userRes.data || [];
+            const allProfiles = profileRes.data || [];
+
+            // 4. Merge profile vào user theo userID
+            const usersWithProfiles = allUsers.map(user => {
+                const profile = allProfiles.find(p => p.userID === user.userID);
+                return {
+                    ...user,
+                    firstName: profile?.firstName || "",
+                    lastName: profile?.lastName || "",
+                    image: profile?.image || "",
+                    numberPhone: profile?.numberPhone || "",
+                    gender: profile?.gender || "",
+                    profileID: profile?.profileID || ""
+                };
+            });
+
+            // 5. Lọc ra những user chưa tham gia
+            const availableMembers = usersWithProfiles.filter(user => {
+                return !currentParticipantIDs.includes(user.userID);
+            });
+
+            return res.json(availableMembers);
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách thành viên khả dụng:", error.message);
+            return res.status(500).json({ error: "Lỗi server khi lấy danh sách thành viên khả dụng" });
+        }
+    },
+
+
     // Cập nhật tên nhóm
     updateChatName: async (req, res) => {
         try {
@@ -137,7 +137,7 @@ module.exports = {
             const { userId } = req.body;
 
             console.log(`Xóa user ${userId} khỏi chat ${conversationId}`);
-            console.log("Body nhận được:", req.body); 
+            console.log("Body nhận được:", req.body);
 
             // Kiểm tra nếu không có userId
             if (!userId) {
@@ -231,32 +231,75 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
+    // Lấy toàn bộ media, file và link đã gửi trong nhóm
+    getChatStorage: async (req, res) => {
+        try {
+            const { conversationId } = req.params;
+
+            // Lấy tất cả messageType là image, video, file hoặc link
+            const messages = await Message.find({
+                conversationId: conversationId,
+                messageType: { $in: ['image', 'video', 'file', 'link'] }
+            });
+
+            // Phân loại dữ liệu theo từng nhóm
+            const media = [];
+            const files = [];
+            const links = [];
+
+            messages.forEach(msg => {
+                if (msg.messageType === 'image' || msg.messageType === 'video') {
+                    media.push(msg);
+                } else if (msg.messageType === 'file') {
+                    files.push(msg);
+                } else if (msg.messageType === 'link') {
+                    links.push(msg);
+                }
+            });
+
+            console.log(`Lấy dữ liệu lưu trữ trong nhóm ${conversationId}:`, {
+                media: media.length,
+                files: files.length,
+                links: links.length
+            });
+
+            res.json({
+                media,
+                files,
+                links
+            });
+
+        } catch (error) {
+            console.error(`Lỗi khi lấy dữ liệu lưu trữ:`, error);
+            res.status(500).json({ error: error.message });
+        }
+    },
 
 
     // Ghim cuộc trò chuyện
     pinChat: async (req, res) => {
         try {
             const { conversationId } = req.params;
-            const { isPinned , userId } = req.body;
+            const { isPinned, userId } = req.body;
 
             console.log(`Ghim nhóm ${conversationId} với trạng thái ${isPinned} cho người dùng ${userId}`);
             if (!req.body || typeof isPinned !== 'boolean') {
                 return res.status(400).json({ message: 'Invalid request body. isPinned must be a boolean.' });
             }
-    
+
             console.log(`Cập nhật trạng thái ghim nhóm ${conversationId} thành ${isPinned}`);
             const chat = await Conversation.findOneAndUpdate(
                 { _id: conversationId, 'participants.userId': userId },
                 { $set: { 'participants.$.isPinned': isPinned } },
                 { new: true }
             );
-                
+
             console.log(`Chat sau khi cập nhật trạng thái ghim:`, chat);
-    
+
             if (!chat) {
                 return res.status(404).json({ message: 'Conversation not found' });
             }
-    
+
             res.json(chat);
         } catch (error) {
             console.log(`Lỗi khi cập nhật trạng thái ghim nhóm:`, error);
@@ -282,15 +325,15 @@ module.exports = {
         try {
             const { conversationId } = req.params;
             const { userId, mute } = req.body;
-    
+
             console.log(`Cập nhật trạng thái thông báo của người dùng ${userId} trong nhóm ${conversationId} thành ${mute}`);
-    
+
             const chat = await Conversation.findOneAndUpdate(
                 { _id: conversationId, 'participants.userId': userId },
                 { $set: { 'participants.$.mute': mute } },
                 { new: true }
             );
-    
+
             console.log(`Chat sau khi cập nhật trạng thái thông báo:`, chat);
             res.json(chat);
         } catch (error) {
@@ -309,11 +352,11 @@ module.exports = {
                 { $set: { 'participants.$.mute': mute } }, // Cập nhật trạng thái mute
                 { new: true } // Trả về tài liệu đã được cập nhật
             );
-    
+
             if (!chat) {
                 return res.status(404).json({ message: "Cuộc trò chuyện không tìm thấy!" });
             }
-    
+
             console.log(`Chat sau khi cập nhật trạng thái thông báo:`, chat);
             res.json(chat); // Trả về thông tin cuộc trò chuyện đã cập nhật
         } catch (error) {
@@ -362,22 +405,22 @@ module.exports = {
     deleteMessageForMe: async (req, res) => {
         try {
             const { messageId } = req.params;
-            const userId = req.userId; 
+            const userId = req.userId;
             console.log("Message ID from params:", messageId); // Kiểm tra messageId từ params
-            console.log("User ID from token:", userId); 
+            console.log("User ID from token:", userId);
             console.log(`User ${userId} xóa tin nhắn ${messageId} chỉ ở phía họ`);
-    
+
             const message = await Message.findById(messageId);
             if (!message) {
                 return res.status(404).json({ message: "Tin nhắn không tồn tại" });
             }
-    
+
             // Kiểm tra nếu tin nhắn đã bị xóa trước đó bởi user này
             if (!message.deletedBy.includes(userId)) {
                 message.deletedBy.push(userId);
                 await message.save();
             }
-    
+
             res.json({ message: "Tin nhắn đã bị ẩn khỏi lịch sử của bạn." });
         } catch (error) {
             console.error("Lỗi khi xóa tin nhắn:", error);
@@ -390,18 +433,18 @@ module.exports = {
         try {
             const { conversationId } = req.params;
             const { userId } = req.body;
-    
+
             if (!userId) {
                 return res.status(400).json({ error: "Thiếu userId!" });
             }
-    
+
             const userIdStr = String(userId); // Ép kiểu để tránh lỗi
-    
+
             const result = await Message.updateMany(
                 { conversationId: conversationId },
                 { $addToSet: { deletedBy: userIdStr } }
             );
-    
+
             res.json({ message: "Lịch sử trò chuyện đã bị xóa khỏi tài khoản của bạn." });
         } catch (error) {
             console.error("Lỗi khi xóa lịch sử trò chuyện:", {
@@ -411,35 +454,35 @@ module.exports = {
             res.status(500).json({ error: "Lỗi server nội bộ.", details: error.message });
         }
     },
-    
+
 
     // Nhóm chung của các user trong conversationId
 
-    getCommonGroups : async (req, res) => {
+    getCommonGroups: async (req, res) => {
         try {
             const { conversationId } = req.params;
             console.log(`Lấy danh sách nhóm chung với conversationId: ${conversationId}`);
-    
+
             // Lấy thông tin cuộc hội thoại hiện tại
             const currentConversation = await Conversation.findById(conversationId).populate('participants.userId');
             if (!currentConversation) {
                 console.log(`Cuộc hội thoại với ID ${conversationId} không tồn tại`);
                 return res.status(404).json({ message: 'Cuộc hội thoại không tồn tại' });
             }
-    
+
             // Lấy danh sách userId từ participants
             const participantIds = currentConversation.participants.map(p => p.userId.toString());
             console.log(`Danh sách userId trong cuộc hội thoại:`, participantIds);
-    
+
             // Tìm tất cả các nhóm mà tất cả participantIds cùng tham gia
             const commonGroups = await Conversation.find({
                 _id: { $ne: conversationId }, // Loại trừ cuộc hội thoại hiện tại
                 isGroup: true, // Chỉ lấy các nhóm
                 'participants.userId': { $all: participantIds } // Tất cả userId phải có trong participants
             }).populate('participants.userId'); // Populate để lấy đầy đủ thông tin user nếu cần
-    
+
             console.log(`Danh sách nhóm chung:`, commonGroups);
-    
+
             res.json({
                 currentConversation,
                 commonGroups // Trả về đầy đủ thông tin của các nhóm
@@ -450,5 +493,5 @@ module.exports = {
         }
     },
 
-    
+
 };
