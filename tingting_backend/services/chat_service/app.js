@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
-const { initializeSocket } = require('./services/socketService');
+const { initializeSocket } = require('./services/socket/index');
 const connectDB = require('./configs/db');
 require('dotenv').config();
 const conversationRoutes = require('./routes/conversationRoutes');

@@ -1,5 +1,5 @@
 const Message = require('../models/Message');
-const { io } = require('../services/socketService'); // Import Socket.IO từ file cấu hình
+const { io } = require('../services/socket/socketService'); // Import Socket.IO từ file cấu hình
 
 module.exports = {
     sendMessage: async (req, res) => {

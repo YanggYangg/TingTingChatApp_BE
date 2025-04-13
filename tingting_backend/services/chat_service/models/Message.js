@@ -19,8 +19,14 @@ const messageSchema = new mongoose.Schema({
     },
     messageType: {
         type: String,
-        enum: ['text', 'image', 'file', 'video'],
+        enum: ['text', 'image', 'file', 'video', 'audio', 'reply', 'emoji', 'sticker', 'location'],
         required: true
+    },
+    // nếu là reply thì link tới tin nhắn gốc
+    replyMessageId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Message',
+        default: null
     },
     linkURL: {
         type: String,
