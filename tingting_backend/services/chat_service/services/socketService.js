@@ -33,6 +33,7 @@ function handleConnection(socket) {
 
     socket.on("disconnect", () => handleDisconnect(socket, userId));
     socket.on("joinConversation", (data) => handleJoinConversation(socket, data, userId));
+    socket.on("leaveConversation", (data) => handleLeaveConversation(socket, data, userId));
     socket.on("typing", (data) => handleTyping(socket, data, userId));
     socket.on("stopTyping", (data) => handleStopTyping(socket, data, userId));
     socket.on("sendMessage", (data) => handleSendMessage(socket, data, userId));
@@ -78,6 +79,17 @@ async function handleJoinConversation(socket, { conversationId }, userId) {
         console.error("Error loading messages:", error);
         socket.emit("error", { message: "Failed to load messages", error: error.message });
     }
+}
+async function handleLeaveConversation(socket, { conversationId }, userId) {
+    if (!conversationId) return;
+    socket.leave(conversationId);
+
+    if (userId && userConversationMap[userId]) {
+        userConversationMap[userId] = userConversationMap[userId].filter(id => id !== conversationId);
+    }
+
+    console.log(`User ${userId} left conversation ${conversationId}`);
+    socket.emit("left", { conversationId });
 }
 
 async function handleSendMessage(socket, { conversationId, message }, userId) {
