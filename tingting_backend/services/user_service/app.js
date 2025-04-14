@@ -5,6 +5,7 @@ import connectToDatabase from './database/mongodb.js';
 import cookieParser from 'cookie-parser';
 import errorMiddleware from './middlewares/error.middleware.js';
 import profileRouter from './routes/profile.routes.js';
+import friendRequestRouter from './routes/friendRequest.routes.js';
 
 
 const app = express();
@@ -17,7 +18,7 @@ app.use(cors({
   }));
 
 app.use('/api/v1/profile', profileRouter);
-
+app.use('/api/v1/friendRequest', friendRequestRouter);
 
 
 app.use(errorMiddleware);
