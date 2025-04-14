@@ -627,50 +627,29 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
-    findMessages : async (req, res) => {
+    findMessages: async (req, res) => {
         try {
             const { conversationId } = req.params;
-            const { page = 1, limit = 20, search } = req.query;
-    
-            if (!mongoose.Types.ObjectId.isValid(conversationId)) {
-                return res.status(400).json({ message: 'ID cuộc trò chuyện không hợp lệ.' });
+            const { searchTerm } = req.query; // Lấy từ khóa tìm kiếm từ query string
+ 
+            console.log(`Tìm kiếm tin nhắn trong nhóm ${conversationId} với từ khóa "${searchTerm}"`);
+            if (!searchTerm) {
+                return res.status(400).json({ message: "Thiếu từ khóa tìm kiếm." });
             }
-    
-            const conversation = await Conversation.findById(conversationId);
-            if (!conversation) {
-                return res.status(404).json({ message: 'Không tìm thấy cuộc trò chuyện.' });
-            }
-    
-            const query = { conversationId: conversationId };
-    
-            if (search) {
-                query.content = { $regex: search, $options: 'i' }; // Tìm kiếm không phân biệt chữ hoa chữ thường
-            }
-    
-            const options = {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                sort: { createdAt: -1 }, // Sắp xếp theo thời gian tạo mới nhất
-                populate: {
-                    path: 'userId',
-                    select: 'username _id' // Chọn các trường bạn muốn hiển thị từ model User
-                }
-            };
-    
-            const messages = await Message.paginate(query, options);
-    
-            return res.status(200).json({
-                totalDocs: messages.totalDocs,
-                totalPages: messages.totalPages,
-                currentPage: messages.page,
-                hasNext: messages.hasNextPage,
-                hasPrev: messages.hasPrevPage,
-                messages: messages.docs,
-            });
-    
+
+            console.log(`Tìm kiếm tin nhắn trong nhóm ${conversationId} với từ khóa "${searchTerm}"`);
+
+            const messages = await Message.find({
+                conversationId,
+                content: { $regex: searchTerm, $options: 'i' } // Tìm kiếm không phân biệt chữ hoa chữ thường
+            })
+
+            
+            console.log(`Kết quả tìm kiếm:`, messages);
+            res.json(messages);
         } catch (error) {
-            console.error('Lỗi khi tìm tin nhắn:', error);
-            return res.status(500).json({ message: 'Đã xảy ra lỗi khi tìm tin nhắn.' });
+            console.error(`Lỗi khi tìm kiếm tin nhắn:`, error);
+            res.status(500).json({ error: error.message });
         }
     }
 
