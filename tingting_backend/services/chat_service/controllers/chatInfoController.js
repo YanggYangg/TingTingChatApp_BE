@@ -439,39 +439,53 @@ module.exports = {
     },
     // Ẩn trò chuyện
     hideChat: async (req, res) => {
+        const { conversationId } = req.params;
+        const { userId, isHidden, pin } = req.body;
+    
         try {
-            const { conversationId } = req.params;
-            const { userId, isHidden, pin } = req.body;
-
+            console.log(`[HIDE CHAT] Processing request for conversation ID: ${conversationId}, user ID: ${userId}, hide status: ${isHidden}`);
+    
+            // Validate required fields
             if (!userId) {
-                return res.status(400).json({ error: "Thiếu userId" });
+                console.warn(`[HIDE CHAT] Missing 'userId' in request body for conversation ${conversationId}.`);
+                return res.status(400).json({ error: "Missing userId" });
             }
-
+    
+            // Find the conversation
             const chat = await Conversation.findById(conversationId);
             if (!chat) {
-                return res.status(404).json({ error: "Không tìm thấy cuộc trò chuyện" });
+                console.warn(`[HIDE CHAT] Conversation not found: ${conversationId}.`);
+                return res.status(404).json({ error: "Conversation not found" });
             }
-
+    
+            // Find the participant
             const participant = chat.participants.find(p => p.userId === userId);
             if (!participant) {
-                return res.status(404).json({ error: "Người dùng không thuộc cuộc trò chuyện này" });
+                console.warn(`[HIDE CHAT] User ${userId} is not a participant in conversation ${conversationId}.`);
+                return res.status(404).json({ error: "User not found in this conversation" });
             }
-
+    
+            // Update isHidden status and handle PIN
             participant.isHidden = isHidden;
             if (isHidden && pin) {
                 const saltRounds = 10;
-                participant.pin = await bcrypt.hash(pin, saltRounds); // Băm mã PIN
+                participant.pin = await bcrypt.hash(pin, saltRounds);
+                console.log(`[HIDE CHAT] User ${userId} hid conversation ${conversationId} and set a PIN.`);
             } else if (!isHidden) {
-                participant.pin = null; // Xóa mã PIN khi hiện lại
+                participant.pin = null;
+                console.log(`[HIDE CHAT] User ${userId} unhid conversation ${conversationId}.`);
             }
-
+    
+            // Update the conversation's updateAt timestamp and save
             chat.updateAt = Date.now();
             await chat.save();
-
+    
+            console.log(`[HIDE CHAT] Successfully updated hide status for user ${userId} in conversation ${conversationId}.`);
             res.json(chat);
+    
         } catch (error) {
-            console.error("Lỗi khi ẩn/hiện trò chuyện:", error);
-            res.status(500).json({ error: error.message });
+            console.error(`[HIDE CHAT] Error while hiding/unhiding conversation ${conversationId} for user ${userId}:`, error);
+            res.status(500).json({ error: "Failed to hide/unhide conversation.", details: error.message });
         }
     },
     deleteSelectedMessagesForMe: async (req, res) => {

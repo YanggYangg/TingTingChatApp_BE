@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: [true, "Phone number is required"],
       unique: [true, "Phone number already exists"],
-      match: [/^\d{10}$/, "Please enter a valid phone number"],
+      match: [/^\d{10}$/, "Please enter a valid phone number"],//validate phone number
     },
     email: {
       type: String,
@@ -19,12 +19,8 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minLength: 6,
     },
-    otp: {
+    userId: {
       type: String,
-      default: null,
-    },
-    otpExpires: {
-      type: Date,
       default: null,
     },
   },

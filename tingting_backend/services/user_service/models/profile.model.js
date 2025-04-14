@@ -33,6 +33,20 @@ const profileSchema = new mongoose.Schema(
       type: Date,
       require: [true, "Date of birth is required"],
     },
+    avatar: {
+      type: String,
+      default: null,
+    },
+    coverPhoto: {
+      type: String,
+      default: null,
+    },
+    phone: {
+      type: String,
+      require: [true, "Phone number is required"],
+      unique: [true, "Phone number already exists"],
+      match: [/^\d{10}$/, "Please enter a valid phone number"],
+    },
   },
   { timestamps: true }
 );
