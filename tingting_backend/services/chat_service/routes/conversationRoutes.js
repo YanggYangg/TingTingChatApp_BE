@@ -11,7 +11,8 @@ router.get('/:conversationId/participants', chatInfoController.getParticipants);
 
 router.post('/:conversationId/participants', chatInfoController.addParticipant);
 router.delete('/:conversationId/participants', chatInfoController.removeParticipant);
-router.put('/:conversationId/participants/role', chatInfoController.changeParticipantRole); // Chưa
+router.put('/:conversationId/transfer-admin/test', chatInfoController.transferGroupAdmin);
+// router.put('/:conversationId/participants/role', chatInfoController.changeParticipantRole); // Chưa
 
 // Cập nhật trạng thái tắt/bật thông báo nhóm
 router.put('/:conversationId/mute', chatInfoController.updateNotification);
