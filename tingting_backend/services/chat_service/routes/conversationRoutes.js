@@ -23,9 +23,10 @@ router.put('/:conversationId/hide', chatInfoController.hideChat);
 router.put('/:conversationId/pin', chatInfoController.pinChat);
 
 // Xóa toàn bộ cuộc trò chuyện phía tôi
-router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
+// router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
 
 // Danh sách nhóm chung
 router.get('/:conversationId/common', chatInfoController.getCommonGroups);
 router.get('/:conversationId/available', chatInfoController.getAvailableMembers);
+router.delete('/delete-all', chatInfoController.deleteAllMessagesInConversationForMe);
 module.exports = router;

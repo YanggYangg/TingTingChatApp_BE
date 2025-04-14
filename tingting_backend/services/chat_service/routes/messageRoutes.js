@@ -12,9 +12,10 @@ router.get('/:conversationId/files', chatInfoController.getChatFiles);
 router.get('/:conversationId/links', chatInfoController.getChatLinks);
 router.get('/:conversationId/storage', chatInfoController.getChatStorage);
 router.get('/:conversationId/reminders', chatInfoController.getReminders);
-router.delete('/:messageId', chatInfoController.deleteMessageForMe);
+router.delete('/delete-selected', chatInfoController.deleteSelectedMessagesForMe);
 
 
 
 
-module.exports = router;
+
+module.exports = router;                                     

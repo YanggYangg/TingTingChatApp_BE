@@ -401,59 +401,116 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
-    // Xóa tin nhắn cụ thể (phía người gửi)
-    deleteMessageForMe: async (req, res) => {
+    deleteSelectedMessagesForMe: async (req, res) => {
         try {
-            const { messageId } = req.params;
-            const userId = req.userId;
-            console.log("Message ID from params:", messageId); // Kiểm tra messageId từ params
-            console.log("User ID from token:", userId);
-            console.log(`User ${userId} xóa tin nhắn ${messageId} chỉ ở phía họ`);
-
-            const message = await Message.findById(messageId);
-            if (!message) {
-                return res.status(404).json({ message: "Tin nhắn không tồn tại" });
+            const { messageIds, userId } = req.body; // Lấy userId từ body
+    
+            console.log("Message IDs từ body:", messageIds); // Kiểm tra messageIds từ body
+            console.log("User ID từ body:", userId); // Kiểm tra userId từ body
+            if (!userId) {
+                return res.status(400).json({ message: "Vui lòng cung cấp userId trong body." });
             }
-
-            // Kiểm tra nếu tin nhắn đã bị xóa trước đó bởi user này
-            if (!message.deletedBy.includes(userId)) {
-                message.deletedBy.push(userId);
-                await message.save();
+    
+            if (!Array.isArray(messageIds) || messageIds.length === 0) {
+                return res.status(400).json({ message: "Vui lòng chọn ít nhất một tin nhắn để xóa." });
             }
-
-            res.json({ message: "Tin nhắn đã bị ẩn khỏi lịch sử của bạn." });
+    
+            console.log("Message IDs từ body:", messageIds);
+            console.log("User ID từ body:", userId);
+            console.log(`User ${userId} đang cố gắng xóa các tin nhắn ${messageIds} chỉ ở phía họ.`);
+    
+            const messages = await Message.find({ _id: { $in: messageIds } });
+    
+            if (!messages || messages.length === 0) {
+                return res.status(404).json({ message: "Không tìm thấy tin nhắn nào với ID đã cung cấp." });
+            }
+    
+            const updatePromises = messages.map(async (message) => {
+                if (!message.deletedBy.includes(userId)) {
+                    message.deletedBy.push(userId);
+                    return message.save();
+                }
+                return null; // Tin nhắn đã bị xóa bởi người dùng này
+            });
+    
+            await Promise.all(updatePromises);
+    
+            res.json({ message: `Đã ẩn ${updatePromises.filter(p => p !== null).length} tin nhắn khỏi lịch sử của bạn.` });
+    
         } catch (error) {
-            console.error("Lỗi khi xóa tin nhắn:", error);
+            console.error("Lỗi khi xóa nhiều tin nhắn:", error);
             res.status(500).json({ error: error.message });
         }
     },
-
-    // Xóa toàn bộ tin nhắn trong cuộc trò chuyện (phía người gửi)
-    deleteChatHistoryForMe: async (req, res) => {
+    
+    deleteAllMessagesInConversationForMe: async (req, res) => {
         try {
-            const { conversationId } = req.params;
-            const { userId } = req.body;
+            const { conversationId, userId } = req.body; // Lấy conversationId và userId từ body
+    
 
+            console.log("Conversation ID từ body:", conversationId); // Kiểm tra conversationId từ body
+            console.log("User ID từ body:", userId); // Kiểm tra userId từ body
             if (!userId) {
-                return res.status(400).json({ error: "Thiếu userId!" });
+                return res.status(400).json({ message: "Vui lòng cung cấp userId trong body." });
             }
-
-            const userIdStr = String(userId); // Ép kiểu để tránh lỗi
-
-            const result = await Message.updateMany(
-                { conversationId: conversationId },
-                { $addToSet: { deletedBy: userIdStr } }
-            );
-
-            res.json({ message: "Lịch sử trò chuyện đã bị xóa khỏi tài khoản của bạn." });
-        } catch (error) {
-            console.error("Lỗi khi xóa lịch sử trò chuyện:", {
-                message: error.message,
-                stack: error.stack
+    
+            if (!conversationId) {
+                return res.status(400).json({ message: "Vui lòng cung cấp conversationId trong body." });
+            }
+    
+            console.log("Conversation ID từ body:", conversationId);
+            console.log("User ID từ body:", userId);
+            console.log(`User ${userId} đang cố gắng xóa toàn bộ tin nhắn trong cuộc trò chuyện ${conversationId} ở phía họ.`);
+    
+            const messages = await Message.find({ conversationId });
+    
+            if (!messages || messages.length === 0) {
+                return res.status(404).json({ message: "Không tìm thấy tin nhắn nào trong cuộc trò chuyện này." });
+            }
+    
+            const updatePromises = messages.map(async (message) => {
+                if (!message.deletedBy.includes(userId)) {
+                    message.deletedBy.push(userId);
+                    return message.save();
+                }
+                return null; // Tin nhắn đã bị xóa bởi người dùng này
             });
-            res.status(500).json({ error: "Lỗi server nội bộ.", details: error.message });
+    
+            await Promise.all(updatePromises);
+    
+            res.json({ message: `Đã ẩn toàn bộ tin nhắn trong cuộc trò chuyện ${conversationId} khỏi lịch sử của bạn.` });
+    
+        } catch (error) {
+            console.error("Lỗi khi xóa toàn bộ tin nhắn trong cuộc trò chuyện:", error);
+            res.status(500).json({ error: error.message });
         }
     },
+    // Xóa toàn bộ tin nhắn trong cuộc trò chuyện (phía người gửi)
+    // deleteChatHistoryForMe: async (req, res) => {
+    //     try {
+    //         const { conversationId } = req.params;
+    //         const { userId } = req.body;
+
+    //         if (!userId) {
+    //             return res.status(400).json({ error: "Thiếu userId!" });
+    //         }
+
+    //         const userIdStr = String(userId); // Ép kiểu để tránh lỗi
+
+    //         const result = await Message.updateMany(
+    //             { conversationId: conversationId },
+    //             { $addToSet: { deletedBy: userIdStr } }
+    //         );
+
+    //         res.json({ message: "Lịch sử trò chuyện đã bị xóa khỏi tài khoản của bạn." });
+    //     } catch (error) {
+    //         console.error("Lỗi khi xóa lịch sử trò chuyện:", {
+    //             message: error.message,
+    //             stack: error.stack
+    //         });
+    //         res.status(500).json({ error: "Lỗi server nội bộ.", details: error.message });
+    //     }
+    // },
 
 
     // Nhóm chung của các user trong conversationId
