@@ -29,5 +29,7 @@ router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
 // Danh sách nhóm chung
 router.get('/:conversationId/common', chatInfoController.getCommonGroups);
 router.get('/:conversationId/available', chatInfoController.getAvailableMembers);
+router.get('/:conversationId/messages', chatInfoController.findMessages);
+
 // router.delete('/delete-all', chatController.deleteAllMessagesInConversationForMe);
 module.exports = router;

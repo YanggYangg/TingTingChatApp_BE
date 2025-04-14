@@ -2,6 +2,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
+const mongoose = require('mongoose');
 
 module.exports = {
     // Lấy thông tin nhóm/chat
@@ -626,6 +627,52 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
+    findMessages : async (req, res) => {
+        try {
+            const { conversationId } = req.params;
+            const { page = 1, limit = 20, search } = req.query;
+    
+            if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+                return res.status(400).json({ message: 'ID cuộc trò chuyện không hợp lệ.' });
+            }
+    
+            const conversation = await Conversation.findById(conversationId);
+            if (!conversation) {
+                return res.status(404).json({ message: 'Không tìm thấy cuộc trò chuyện.' });
+            }
+    
+            const query = { conversationId: conversationId };
+    
+            if (search) {
+                query.content = { $regex: search, $options: 'i' }; // Tìm kiếm không phân biệt chữ hoa chữ thường
+            }
+    
+            const options = {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                sort: { createdAt: -1 }, // Sắp xếp theo thời gian tạo mới nhất
+                populate: {
+                    path: 'userId',
+                    select: 'username _id' // Chọn các trường bạn muốn hiển thị từ model User
+                }
+            };
+    
+            const messages = await Message.paginate(query, options);
+    
+            return res.status(200).json({
+                totalDocs: messages.totalDocs,
+                totalPages: messages.totalPages,
+                currentPage: messages.page,
+                hasNext: messages.hasNextPage,
+                hasPrev: messages.hasPrevPage,
+                messages: messages.docs,
+            });
+    
+        } catch (error) {
+            console.error('Lỗi khi tìm tin nhắn:', error);
+            return res.status(500).json({ message: 'Đã xảy ra lỗi khi tìm tin nhắn.' });
+        }
+    }
 
 
 };
