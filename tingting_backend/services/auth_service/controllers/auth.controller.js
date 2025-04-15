@@ -194,6 +194,7 @@ export const generateToken = async (req, res, next) => {
         .json({ message: "OTP is not valid or has expired" });
     }
     await redisClient.del(`${phone}:sign-in`);
+  
     const existingUser = await User.findOne({ phone });
 
     const claims = {
@@ -209,6 +210,10 @@ export const generateToken = async (req, res, next) => {
         expiresIn: JWT_EXPIRES_IN,
       }
     );
+    await redisClient.set(`${phone}:token`, token, {
+      EX: 60 * 60 * 1,
+    });
+
     res.status(200).json({
       success: true,
       message: "User logged in successfully",
@@ -255,27 +260,27 @@ export const resentOTP = async (req, res, next) => {
     next(error);
   }
 };
-// export const signOut = async (req, res, next) => {
-//   try {
+export const signOut = async (req, res, next) => {
+  try {
     
-//     const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization;
    
 
-//     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-//       return res.status(401).json({ message: "Unauthorized" });
-//     }
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-//     const token = authHeader.split(" ")[1];
+    const token = authHeader.split(" ")[1];
 
-//     await redisClient.set(token, "revoked", {
-//       EX: 60 * 60 * 1,
-//     });
-//     console.log("signing out...");
-//     return res.status(200).json({ message: "Logged out successfully" });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+    await redisClient.set(token, "revoked", {
+      EX: 60 * 60 * 1,
+    });
+    console.log("signing out...");
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const validateToken = async (req, res, next) => {
   try {
@@ -284,17 +289,22 @@ export const validateToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("No token found in the header");
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     const token = authHeader.split(" ")[1];
 
-    const isRevoked = await redisClient.get(token);
+    console.log("token", token);
+
+    const phone = req.body.phone;
+
+    const isRevoked = await redisClient.get(`${phone}:token`);
     if (isRevoked) {
-      return res.status(401).json({ message: "Token has been revoked" });
+      return res.status(401).json({ message: "Token has been revoked", success: false });
     }
 
-    return res.status(200).json({ message: "Token is valid" });
+    return res.status(200).json({ message: "Token is valid", success: true });
   } catch (error) {
     next(error);
   }
@@ -312,10 +322,10 @@ export const forgotPassword = async (req, res, next) => {
       EX: 60 * 5,
     });
 
-    await sendEmail(email, otp);
-    res.status(200).json({
-      success: true,
-      message: "OTP sent to your email!" });
+    // await sendEmail(email, otp);
+    // res.status(200).json({
+    //   success: true,
+    //   message: "OTP sent to your email!" });
 
     const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
     const response = await axios.get(
