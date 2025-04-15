@@ -4,6 +4,7 @@ import Profile from "../models/profile.model.js";
 export const getProfiles = async (req, res) => {
   try {
     const users = await Profile.find();
+    //console.log("All USERS: ", users);
     res.status(200).json({
       status: "success",
       data: {
@@ -137,5 +138,20 @@ export const uploadImage2 = async (req, res, next) => {
   }
 }
 
+export const getUserPhone = async (req, res) => {
+  try{
+    const userId = req.params.id;
+    const user = await Profile.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.status(200).json({
+      phone: user.phone, 
+    });
+  }catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+
+};
 
 
