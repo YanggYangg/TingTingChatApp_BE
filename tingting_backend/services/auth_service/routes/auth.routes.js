@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signIn, signOut, signUp, validateToken, forgotPassword, updateNewPassword, verifyOTP, generateToken, resentOTP, createAccount } from "../controllers/auth.controller.js";
+import { signIn, signUp, validateToken, forgotPassword, updateNewPassword, verifyOTP, generateToken, resentOTP, createAccount } from "../controllers/auth.controller.js";
 
 const authRouter = Router();
 
@@ -9,7 +9,7 @@ authRouter.post("/create-account", createAccount);
 
 authRouter.post("/sign-in", signIn);
 
-authRouter.post("/sign-out", signOut);
+// authRouter.post("/sign-out", signOut);
 
 authRouter.post("/generate-token", generateToken);
 

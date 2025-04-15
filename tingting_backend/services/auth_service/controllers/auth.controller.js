@@ -255,27 +255,27 @@ export const resentOTP = async (req, res, next) => {
     next(error);
   }
 };
-export const signOut = async (req, res, next) => {
-  try {
+// export const signOut = async (req, res, next) => {
+//   try {
     
-    const authHeader = req.headers.authorization;
+//     const authHeader = req.headers.authorization;
    
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+//     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+//       return res.status(401).json({ message: "Unauthorized" });
+//     }
 
-    const token = authHeader.split(" ")[1];
+//     const token = authHeader.split(" ")[1];
 
-    await redisClient.set(token, "revoked", {
-      EX: 60 * 60 * 1,
-    });
-    console.log("signing out...");
-    return res.status(200).json({ message: "Logged out successfully" });
-  } catch (error) {
-    next(error);
-  }
-};
+//     await redisClient.set(token, "revoked", {
+//       EX: 60 * 60 * 1,
+//     });
+//     console.log("signing out...");
+//     return res.status(200).json({ message: "Logged out successfully" });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 export const validateToken = async (req, res, next) => {
   try {
