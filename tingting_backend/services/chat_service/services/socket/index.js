@@ -35,11 +35,12 @@ module.exports = {
             });
             socket.on('leaveConversation', (data) => {
                 if (!data.conversationId) {
-                    return logger.error('Invalid conversation ID provided on leave');
+                    // return logger.error('Invalid conversation ID provided on leave');
                 }
                 handleLeaveConversation(socket, data, socket.handshake.query.userId);
             });
             socket.on('sendMessage', (data) => {
+                console.log('sendMessage', data);
                 if (!data.conversationId || !data.message) {
                     return logger.error('Invalid message data provided');
                 }

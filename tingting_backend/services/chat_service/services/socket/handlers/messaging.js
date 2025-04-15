@@ -60,4 +60,38 @@ module.exports = {
             errorHandler(socket, 'Failed to send message', error);
         }
     },
+    handleDeleteMessage(socket, { messageId, conversationId }, userId) {
+
+        if (!messageId || !conversationId) {
+            return errorHandler(socket, 'Invalid message data');
+        }
+        try {
+            // Xóa tin nhắn khỏi cơ sở dữ liệu
+            Message.findByIdAndDelete(messageId)
+                .then(() => {
+                    logger.info(`Message deleted: ${messageId}`);
+
+                    //load lại danh sách tin nhắn trong cuộc trò chuyện
+                    Message.find({ conversationId })
+                        .sort({ createdAt: -1 })
+                        .then((messages) => {
+                            socket.to(conversationId).emit('loadMessages', messages.reverse());
+                            socket.emit('messageDeleted', messageId);
+                        })
+                        .catch((error) => {
+                            errorHandler(socket, 'Failed to load messages after deletion', error);
+                        });
+                })
+                .catch((error) => {
+                    errorHandler(socket, 'Failed to delete message', error);
+                });
+
+
+        } catch (error) {
+            errorHandler(socket, 'Failed to delete message', error);
+
+        }
+    }
+
+
 };
