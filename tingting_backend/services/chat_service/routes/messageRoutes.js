@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllMessages, getMessageByConversationId } = require('../controllers/messageController');
+const { getAllMessages, getMessageByConversationId, deleteMessage } = require('../controllers/messageController');
 const chatInfoController = require('../controllers/chatInfoController');
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.get('/:conversationId/links', chatInfoController.getChatLinks);
 router.get('/:conversationId/storage', chatInfoController.getChatStorage);
 router.get('/:conversationId/reminders', chatInfoController.getReminders);
 router.delete('/delete-selected', chatInfoController.deleteSelectedMessagesForMe);
+router.delete('/delete', deleteMessage); // Xóa nhiều tin nhắn bằng ID
 
 
 
