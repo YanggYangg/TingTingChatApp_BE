@@ -255,3 +255,32 @@ export const checkFriendStatus = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 }
+
+export const getFriendsList = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const requests = await FriendRequest.find({
+      status: "accepted",
+      $or: [
+        { requester: userId },
+        { recipient: userId },
+      ],
+    }).populate("requester recipient", "firstname surname avatar phone");
+
+    const friends = requests.map((req) => {
+      const friend =
+        req.requester._id.toString() === userId ? req.recipient : req.requester;
+      return {
+        _id: friend._id,
+        name: `${friend.firstname} ${friend.surname}`,
+        avatar: friend.avatar,
+        phone: friend.phone,
+      };
+    });
+
+    return res.status(200).json({ data: friends });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};

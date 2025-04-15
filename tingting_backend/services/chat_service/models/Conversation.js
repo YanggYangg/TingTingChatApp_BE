@@ -20,6 +20,20 @@ const conversationSchema = new mongoose.Schema({
             // userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             userId: { type: String, required: true },
             role: { type: String }, // chỉ có khi isGroup = true
+            mute: {
+                type: String,
+                enum: ['1h', '4h', '8am', 'forever', null],
+                default: null,
+            },
+            isHidden: {
+                type: Boolean,
+                default: false,
+            },
+            isPinned: {
+                type: Boolean,
+                default: false,
+            },
+            pin: { type: String }, // Lưu mã PIN đã băm
         },
     ],
     lastMessage: {

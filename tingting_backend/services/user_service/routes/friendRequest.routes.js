@@ -7,7 +7,8 @@ import { sendFriendRequest,
     cancelFriendRequest,
     unfriend,
     getFriendRequestsForUser,
-    checkFriendStatus
+    checkFriendStatus,
+    getFriendsList
 }  from "../controllers/friendRequest.controller.js";
 
 const friendRequestRouter = Router();
@@ -21,5 +22,6 @@ friendRequestRouter.post("/cancelFriendRequest", cancelFriendRequest);
 friendRequestRouter.post("/unfriend/:requestId", unfriend);
 friendRequestRouter.get("/getFriendRequestsForUser/:userId", getFriendRequestsForUser);
 friendRequestRouter.post("/checkFriendStatus", checkFriendStatus);
+friendRequestRouter.get("/getFriendsLists/:userId", getFriendsList);
 
 export default friendRequestRouter;
