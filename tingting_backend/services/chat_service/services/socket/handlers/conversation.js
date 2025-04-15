@@ -23,7 +23,8 @@ module.exports = {
             // Gửi danh sách cuộc trò chuyện về client
             socket.emit('loadConversations', conversations);
 
-            logger.info(`Loaded ${conversations.length} conversations for user ${userId}`);
+            
+            logger.info(`Loaded ${conversations.length} conversations for user ${userId} detail ${JSON.stringify(conversations)}`);
         } catch (error) {
             errorHandler(socket, 'Failed to load conversations', error);
         }

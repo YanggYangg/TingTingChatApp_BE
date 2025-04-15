@@ -1,5 +1,7 @@
 // src/services/socket/handlers/messaging.js
 const Message = require('../../../models/Message');
+const Conversation = require('../../../models/Conversation');
+
 const logger = require('../../../utils/logger');
 const errorHandler = require('../../../utils/errorHandler');
 
@@ -32,11 +34,28 @@ module.exports = {
                 createdAt: new Date(),
             });
 
-            await newMessage.save();
-            logger.info(`Message saved: ${newMessage._id}`);
+            const savedMessage = await newMessage.save();
+            logger.info(`Message saved: ${savedMessage._id}`);
 
-            socket.to(conversationId).emit('receiveMessage', newMessage);
-            socket.emit('messageSent', newMessage);
+            // Update the last message in the conversation
+            const conversation = await Conversation.findById(conversationId);
+            if (conversation) {
+                conversation.lastMessage = savedMessage._id;
+                conversation.updatedAt = new Date();
+                await conversation.save();
+                logger.info(`Conversation updated: ${conversationId}`);
+
+                // Emit events
+                socket.to(conversationId).emit('receiveMessage', savedMessage);
+                socket.emit('messageSent', savedMessage);
+
+                // Emit conversation update event to all users in the conversation
+                io.to(conversationId).emit('conversationUpdated', {
+                    conversationId,
+                    lastMessage: savedMessage,
+                    updatedAt: conversation.updatedAt
+                });
+            }
         } catch (error) {
             errorHandler(socket, 'Failed to send message', error);
         }
