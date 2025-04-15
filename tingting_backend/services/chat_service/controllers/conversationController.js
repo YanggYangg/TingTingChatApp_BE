@@ -22,4 +22,14 @@ module.exports = {
             res.status(500).json({ message: "Error when create conversation" });
         }
     },
+    createConversation2: async (req, res) => {
+        try {
+            const newConversation = new Conversation(req.body);
+            const savedConversation = await newConversation.save();
+            res.status(201).json({ success: true, data: savedConversation }); // Response thành công
+        } catch (error) {
+            console.error("Lỗi khi tạo cuộc trò chuyện:", error);
+            res.status(500).json({ success: false, message: "Lỗi khi tạo cuộc trò chuyện", error: error.message }); // Response lỗi
+        }
+    },
 };
