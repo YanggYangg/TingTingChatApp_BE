@@ -34,5 +34,44 @@ module.exports = {
             console.log("=====Khong get duoc Messages by conversationId==== ", error);
             res.status(500).json({ message: "Error when get messages by conversationId" });
         }
-    }
+    },
+    deleteMessage: async (req, res) => {
+
+        try {
+    
+          const { messageIds } = req.body; // Nhận một mảng messageIds từ body
+    
+    
+    
+          if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
+    
+            return res.status(400).json({ message: 'Vui lòng cung cấp một hoặc nhiều ID tin nhắn để xóa.' });
+    
+          }
+    
+    
+    
+          // Xóa các tin nhắn
+    
+          const deletedMessages = await Message.deleteMany({ _id: { $in: messageIds } });
+    
+    
+    
+          if (deletedMessages.deletedCount === 0) {
+    
+            return res.status(404).json({ message: 'Không tìm thấy tin nhắn nào để xóa.' });
+    
+          }
+    
+    
+    
+          res.status(200).json({ message: `Đã xóa ${deletedMessages.deletedCount} tin nhắn và các tài nguyên liên quan.` });
+    
+        } catch (error) {
+    
+          res.status(500).json({ error: error.message });
+    
+        }
+    
+      }
 };
