@@ -1,11 +1,12 @@
 const express = require('express');
-const { getAllConversations, createConversation, createConversation2 } = require('../controllers/conversationController');
+const { getAllConversations, createConversation, createConversation2, getAllConversationById } = require('../controllers/conversationController');
 const chatInfoController = require('../controllers/chatInfoController');
 const router = express.Router();
 
 router.get('/', getAllConversations);
 router.post('/createConversation', createConversation);
 router.post('/createConversation2', createConversation2);
+router.get('/getAllConversationById/:userId', getAllConversationById);
 
 router.get('/:conversationId', chatInfoController.getChatInfo);
 router.put('/:conversationId', chatInfoController.updateChatName);
