@@ -1,9 +1,5 @@
-const { dynamodb } = require("../config/awsConfig");
-const {
-  PutCommand,
-  GetCommand,
-  QueryCommand,
-} = require("@aws-sdk/lib-dynamodb");
+const { dynamodb } = require('../config/awsConfig');
+const { PutCommand, GetCommand, QueryCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 
 class DynamoDBService {
   async saveMessage(messageData) {
@@ -26,14 +22,24 @@ class DynamoDBService {
   async getMessagesByUserId(userId) {
     const params = {
       TableName: process.env.DYNAMODB_TABLE_NAME,
-      IndexName: "userId-index", // Tên GSI
-      KeyConditionExpression: "userId = :userId",
+      IndexName: 'userId-index',
+      KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
-        ":userId": userId,
+        ':userId': userId,
       },
     };
     const result = await dynamodb.send(new QueryCommand(params));
     return result.Items || [];
+  }
+
+  async deleteMessage(messageId) {
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE_NAME,
+      Key: { messageId },
+      ReturnValues: 'ALL_OLD',
+    };
+    const result = await dynamodb.send(new DeleteCommand(params));
+    return result.Attributes;
   }
 }
 
