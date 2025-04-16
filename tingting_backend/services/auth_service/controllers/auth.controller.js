@@ -128,51 +128,51 @@ export const signIn = async (req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    const createdAt = existingUser.createdAt.getTime();
-    const currentTime = new Date().getTime();
-    const timeDiff = currentTime - createdAt;
-    const threeMinutes = 3 * 60 * 1000; // 3 phút
-    if (timeDiff < threeMinutes) {
-      const token = jwt.sign(
-        { id: existingUser._id, phone: existingUser.phone },
-        JWT_SECRET,
-        {
-          expiresIn: JWT_EXPIRES_IN,
-        }
-      );
-      await redisClient.set(`${phone}:token`, token, {
-        EX: 60 * 60 * 1,
-      });
-      return res.status(200).json({
-        success: true,
-        login: true,
-        message: "User logged in successfully",
-        data: {
-          user: existingUser,
-          token,
-        },
-      });
-    } else {
+    // const createdAt = existingUser.createdAt.getTime();
+    // const currentTime = new Date().getTime();
+    // const timeDiff = currentTime - createdAt;
+    // const threeMinutes = 3 * 60 * 1000; // 3 phút
+    // if (timeDiff < threeMinutes) {
+    //   const token = jwt.sign(
+    //     { id: existingUser._id, phone: existingUser.phone },
+    //     JWT_SECRET,
+    //     {
+    //       expiresIn: JWT_EXPIRES_IN,
+    //     }
+    //   );
+    //   await redisClient.set(`${phone}:token`, token, {
+    //     EX: 60 * 60 * 10,
+    //   });
+    //   return res.status(200).json({
+    //     success: true,
+    //     login: true,
+    //     message: "User logged in successfully",
+    //     data: {
+    //       user: existingUser,
+    //       token,
+    //     },
+    //   });
+    // } else 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
       await redisClient.set(`${phone}:sign-in`, otp, {
         EX: 60 * 5,
       });
-      // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
+      const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
 
-      // const response = await axios.get(
-      //   `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
-      // );
-      // if (response.status !== 200) {
-      //   const error = new Error("Failed to send OTP");
-      //   error.statusCode = 500;
-      //   throw error;
-      // }
+      const response = await axios.get(
+        `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
+      );
+      if (response.status !== 200) {
+        const error = new Error("Failed to send OTP");
+        error.statusCode = 500;
+        throw error;
+      }
       res.status(200).json({
         success: true,
         message: "Valid data! Check your phone for the OTP",
       });
-    }
+    
   } catch (error) {
     next(error);
   }
@@ -235,16 +235,16 @@ export const resentOTP = async (req, res, next) => {
     await redisClient.set(`${phone}:sign-in`, otp, {
       EX: 60 * 5,
     });
-    // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
+    const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
 
-    // const response = await axios.get(
-    //   `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
-    // );
-    // if (response.status !== 200) {
-    //   const error = new Error("Failed to send OTP");
-    //   error.statusCode = 500;
-    //   throw error;
-    // }
+    const response = await axios.get(
+      `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
+    );
+    if (response.status !== 200) {
+      const error = new Error("Failed to send OTP");
+      error.statusCode = 500;
+      throw error;
+    }
     res.status(200).json({
       success: true,
       message: "Mã OTP đã được gửi lại thành công!",
@@ -291,15 +291,17 @@ export const validateToken = async (req, res, next) => {
       console.log("No token found in the header");
       return res.status(401).json({ message: "Unauthorized" });
     }
-
+    
     const token = authHeader.split(" ")[1];
-   
-    const phone = req.body.phone || null;
-  
+    //get phone from token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const phone = decoded.claims.phone;
+    console.log("Phone" , phone);
+    console.log("Decoded token = ", token);
     if (phone) {
       const tokenRedis = await redisClient.get(`${phone}:token`);
-      if (tokenRedis !== null || token === tokenRedis) {
-       
+      if (tokenRedis !== null && token === tokenRedis) {
+        console.log("Token is valid in redis");
         return res
           .status(200)
           .json({ message: "Token is valid", success: true });
@@ -336,15 +338,15 @@ export const forgotPassword = async (req, res, next) => {
     //   success: true,
     //   message: "OTP sent to your email!" });
 
-    // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
-    // const response = await axios.get(
-    //   `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
-    // );
-    // if (response.status !== 200) {
-    //   const error = new Error("Failed to send OTP");
-    //   error.statusCode = 500;
-    //   throw error;
-    // }
+    const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
+    const response = await axios.get(
+      `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
+    );
+    if (response.status !== 200) {
+      const error = new Error("Failed to send OTP");
+      error.statusCode = 500;
+      throw error;
+    }
     res.status(200).json({
       success: true,
       message: "Mã OTP đã được gửi đến số điện thoại của bạn!",
