@@ -28,15 +28,15 @@ export const signUp = async (req, res, next) => {
     await redisClient.set(`${phone}:sign-up`, otp, {
       EX: 60 * 5,
     });
-    // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
-    // const response = await axios.get(
-    //   `https://admin.freesms.vn/services/send.php?key=${KEY_FREESMS}&number=${phone}&message=${message}%0D%0A&devices=105&type=sms&prioritize=0`
-    // );
-    // if (response.status !== 200) {
-    //   const error = new Error("Failed to send OTP");
-    //   error.statusCode = 500;
-    //   throw error;
-    // }
+    const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
+    const response = await axios.get(
+      `https://admin.freesms.vn/services/send.php?key=${KEY_FREESMS}&number=${phone}&message=${message}%0D%0A&devices=105&type=sms&prioritize=0`
+    );
+    if (response.status !== 200) {
+      const error = new Error("Failed to send OTP");
+      error.statusCode = 500;
+      throw error;
+    }
     res.status(200).json({
       success: true,
       message: "Valid data! Check your phone for the OTP",
@@ -168,14 +168,14 @@ export const signIn = async (req, res, next) => {
     });
     const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
 
-    // const response = await axios.get(
-    //   `https://admin.freesms.vn/services/send.php?key=${KEY_FREESMS}&number=${phone}&message=${message}&devices={DEVICE_NUMBER}&type=sms&prioritize=0`
-    // );
-    // if (response.status !== 200) {
-    //   const error = new Error("Failed to send OTP");
-    //   error.statusCode = 500;
-    //   throw error;
-    // }
+    const response = await axios.get(
+      `https://admin.freesms.vn/services/send.php?key=${KEY_FREESMS}&number=${phone}&message=${message}&devices=105&type=sms&prioritize=1`
+    );
+    if (response.status !== 200) {
+      const error = new Error("Failed to send OTP");
+      error.statusCode = 500;
+      throw error;
+    }
     res.status(200).json({
       success: true,
       message: "Valid data! Check your phone for the OTP",
@@ -239,14 +239,14 @@ export const resentOTP = async (req, res, next) => {
     });
     const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
 
-    // const response = await axios.get(
-    //   `https://admin.freesms.vn/services/send.php?key=9fe0206d773b316908c5893ca0045cd2f8e84795&number=${phone}&message=${message}&devices={DEVICE_NUMBER}&type=sms&prioritize=0`
-    // );
-    // if (response.status !== 200) {
-    //   const error = new Error("Failed to send OTP");
-    //   error.statusCode = 500;
-    //   throw error;
-    // }
+    const response = await axios.get(
+      `https://admin.freesms.vn/services/send.php?key=9fe0206d773b316908c5893ca0045cd2f8e84795&number=${phone}&message=${message}&devices={DEVICE_NUMBER}&type=sms&prioritize=0`
+    );
+    if (response.status !== 200) {
+      const error = new Error("Failed to send OTP");
+      error.statusCode = 500;
+      throw error;
+    }
     res.status(200).json({
       success: true,
       message: "Mã OTP đã được gửi lại thành công!",
