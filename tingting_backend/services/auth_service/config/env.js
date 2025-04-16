@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 
 config({ path: `.env.${process.env.NODE_ENV || "development"}.local` });
+console.log("DB_URI loaded is:", process.env.DB_URI);
 
 export const {
   NODE_ENV,

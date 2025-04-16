@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { getProfile, getProfiles, createProfile, updateProfile, deleteProfile, uploadImage2 } from "../controllers/profile.controller.js";
+import { getProfile, 
+    getProfiles, 
+    createProfile, 
+    updateProfile, 
+    deleteProfile, 
+    uploadImage2,
+    getUserPhone
+ } from "../controllers/profile.controller.js";
 import { authorize } from "../middlewares/auth.middleware.js";
 import { upload } from "../utils/aws.helper.js";
 
@@ -11,6 +18,7 @@ profileRouter.get("/:id", authorize, getProfile);
 profileRouter.post("/:id", authorize , updateProfile);
 profileRouter.delete("/:id", authorize, deleteProfile);
 profileRouter.post("/upload", authorize, upload, uploadImage2);
+profileRouter.get("/getUserPhone/:id", getUserPhone);
 
 
 

@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: [true, "Phone number is required"],
       unique: [true, "Phone number already exists"],
-      match: [/^\d{10}$/, "Please enter a valid phone number"],
+      match: [/^\d{10}$/, "Please enter a valid phone number"],//validate phone number
     },
     email: {
       type: String,
