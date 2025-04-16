@@ -8,7 +8,7 @@ import User from "../models/user.model.js";
 import {
   JWT_SECRET,
   JWT_EXPIRES_IN,
-  PORT_AUTH_SERVICE,
+  PORT_USER_SERVICE,
 } from "../config/env.js";
 import redisClient from "../utils/redisClient.js";
 
@@ -74,7 +74,7 @@ export const createAccount = async (req, res, next) => {
 
    
     const response = await axios.post(
-      `http://localhost:3001/api/v1/profile`,
+      `http://localhost:${PORT_USER_SERVICE}/api/v1/profile`,
       profile
     );
     console.log("profile", profile);
