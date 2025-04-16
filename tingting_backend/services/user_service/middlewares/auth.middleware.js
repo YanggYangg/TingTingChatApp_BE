@@ -1,4 +1,5 @@
 import axios from "axios";
+import { PORT_AUTH_SERVICE} from "../config/env.js";
 
 export const authorize = async (req, res, next) => {
   const token = req.headers.authorization;
@@ -6,7 +7,7 @@ export const authorize = async (req, res, next) => {
  
   try {
     const response = await axios.post(
-      "http://localhost:3000/api/v1/auth/validate-token",
+      `http://localhost:${PORT_AUTH_SERVICE}/api/v1/auth/validate-token`,
       null,
       {
         headers: {

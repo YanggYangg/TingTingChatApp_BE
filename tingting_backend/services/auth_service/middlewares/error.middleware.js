@@ -21,7 +21,7 @@ const errorMiddleware = (err, req, res, next) => {
         }
         console.log("message: ", error.message);
         res.status(error.statusCode || 500).json({
-            success: "false",
+            success: false,
             message: error.message || "Server Error",
         });
     } catch (error) {
