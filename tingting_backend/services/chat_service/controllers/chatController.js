@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation'); // Import model Conversation
 const { getIO } = require('../services/socket/socketService'); // Import hàm lấy instance IO
+const { mongoose } = require('mongoose'); // Import mongoose để kiểm tra ObjectId
 
 module.exports = {
     sendMessage: async (req, res) => {
@@ -126,5 +127,77 @@ module.exports = {
             console.error("Error when deleting message:", error);
             res.status(500).json({ error: error.message });
         }
-    }
+    },
+    forwardMessage: async (req, res) => {
+        try {
+            const { messageId, targetConversationIds, userId, content } = req.body;
+            console.log("Dữ liệu nhận được:", req.body);
+
+            if (!messageId || !Array.isArray(targetConversationIds) || targetConversationIds.length === 0 || !userId) {
+                return res.status(400).json({ message: "Missing required information for forwarding." });
+            }
+
+            const originalMessage = await Message.findById(messageId);
+            if (!originalMessage) {
+                return res.status(404).json({ message: "Original message not found." });
+            }
+
+            const forwardedMessages = [];
+
+            for (const targetConversationId of targetConversationIds) {
+                // Kiểm tra xem targetConversationId có phải là ObjectId hợp lệ không
+                if (!mongoose.Types.ObjectId.isValid(targetConversationId)) {
+                    console.log(`Invalid targetConversationId: ${targetConversationId}`);
+                    continue; // Bỏ qua ID không hợp lệ và tiếp tục
+                }
+
+                const newMessage = new Message({
+                    conversationId: targetConversationId,
+                    userId: userId,
+                    content: content ? `${content}\n\n--- Forwarded Message ---\n${originalMessage.content}` : `--- Forwarded Message ---\n${originalMessage.content}`,
+                    messageType: originalMessage.messageType,
+                    linkURL: originalMessage.linkURL,
+                    replyMessageId: originalMessage.replyMessageId,
+                });
+
+                console.log("Tin nhắn trước khi lưu:", newMessage);
+                try {
+                    const savedMessage = await newMessage.save();
+                    console.log("Tin nhắn sau khi lưu:", savedMessage);
+                    forwardedMessages.push(savedMessage);
+
+                    try {
+                        const updateResult = await Conversation.findByIdAndUpdate(targetConversationId, {
+                            lastMessage: savedMessage._id,
+                            updateAt: Date.now()
+                        });
+                        console.log("Kết quả cập nhật Conversation:", updateResult);
+                        if (!updateResult) {
+                            console.log(`Không tìm thấy Conversation để cập nhật: ${targetConversationId}`);
+                        }
+                    } catch (updateError) {
+                        console.error("Lỗi khi cập nhật Conversation:", updateError);
+                    }
+
+                    const io = getIO();
+                    if (io) {
+                        io.to(targetConversationId).emit("receiveMessage", savedMessage);
+                        console.log(`Forwarded message emitted to conversation ${targetConversationId}:`, savedMessage);
+                    } else {
+                        console.log("Socket IO không được khởi tạo.");
+                    }
+                } catch (saveError) {
+                    console.error("Lỗi khi lưu tin nhắn đã chuyển tiếp:", saveError);
+                    // Quyết định xem có muốn tiếp tục chuyển tiếp đến các cuộc trò chuyện khác hay không
+                }
+            }
+
+            res.status(201).json(forwardedMessages);
+
+        } catch (error) {
+            console.error("Lỗi chung khi chuyển tiếp tin nhắn:", error);
+            res.status(500).json({ message: "Error when forwarding message." });
+        }
+    },
+
 };
