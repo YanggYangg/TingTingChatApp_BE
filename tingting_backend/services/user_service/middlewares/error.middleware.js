@@ -2,14 +2,12 @@ const errorMiddleware = (err, req, res, next) => {
     try {
         let error = { ...err };
         error.message = err.message;
-        console.log("Over there in error middleware");
-        
-
+       
         console.error(err);
 
         //Mongooes bad object id    
         if (err.name === "CastError") {
-            const message = `Resource not found`;
+            const message = `Resource not found 1`;
             error = new Error(message);
             error.statusCode = 404;
         }

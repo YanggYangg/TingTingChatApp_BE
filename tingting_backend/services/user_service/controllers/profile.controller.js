@@ -1,5 +1,5 @@
 import Profile from "../models/profile.model.js";
-// import { uploadImage } from "../utils/file.service.js";
+import { uploadImage } from "../utils/file.service.js";
 
 export const getProfiles = async (req, res) => {
   try {
@@ -20,7 +20,7 @@ export const getProfiles = async (req, res) => {
 };
 export const getProfile = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id, phone } = req.params;
     const user = await Profile.findById(id).select("-password -__v");
     if (!user) {
       return res.status(404).json({
@@ -117,6 +117,7 @@ export const deleteProfile = async (req, res, next) => {
 
 export const uploadImage2 = async (req, res, next) => {
   try {
+    console.log("put image to s3");
     if (!req.file) {
       return res.status(400).json({
         status: "fail",
@@ -124,8 +125,7 @@ export const uploadImage2 = async (req, res, next) => {
       });
     }
     const fileUrl = await uploadImage(req.file);
-    console.log("file = ", fileUrl);
-
+  
     res.status(200).json({
       status: "success",
       message: "File uploaded successfully",

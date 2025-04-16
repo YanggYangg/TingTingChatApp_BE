@@ -17,7 +17,7 @@ profileRouter.post("/", createProfile);
 profileRouter.get("/:id", authorize, getProfile); 
 profileRouter.post("/:id", authorize , updateProfile);
 profileRouter.delete("/:id", authorize, deleteProfile);
-profileRouter.post("/upload", authorize, upload, uploadImage2);
+profileRouter.put("/upload", authorize, upload, uploadImage2 );
 profileRouter.get("/getUserPhone/:id", getUserPhone);
 
 
