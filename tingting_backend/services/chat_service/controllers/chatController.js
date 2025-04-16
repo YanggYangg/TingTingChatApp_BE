@@ -154,7 +154,9 @@ module.exports = {
                 const newMessage = new Message({
                     conversationId: targetConversationId,
                     userId: userId,
-                    content: content ? `${content}\n\n--- Forwarded Message ---\n${originalMessage.content}` : `--- Forwarded Message ---\n${originalMessage.content}`,
+                    content: content
+                    ? `\n${originalMessage.content}\n\n${content}`
+                    : `\n${originalMessage.content}`,
                     messageType: originalMessage.messageType,
                     linkURL: originalMessage.linkURL,
                     replyMessageId: originalMessage.replyMessageId,
@@ -183,8 +185,7 @@ module.exports = {
                     if (io) {
                         io.to(targetConversationId).emit("receiveMessage", savedMessage);
                         console.log(`Forwarded message emitted to conversation ${targetConversationId}:`, savedMessage);
-                    } else {
-                        console.log("Socket IO không được khởi tạo.");
+                    } else {console.log("Socket IO không được khởi tạo.");
                     }
                 } catch (saveError) {
                     console.error("Lỗi khi lưu tin nhắn đã chuyển tiếp:", saveError);
