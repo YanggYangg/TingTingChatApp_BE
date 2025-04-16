@@ -1,4 +1,5 @@
 const express = require('express');
+<<<<<<< HEAD
 const { getAllMessages, getMessageByConversationId, deleteMessage, sendMessageWithMedia } = require('../controllers/messageController');
 const router = express.Router();
 
@@ -21,4 +22,12 @@ router.post('/sendMessageWithMedia', uploadSingle, sendMessageWithMedia);
 
 
 
+=======
+const { getAllMessages, getMessageByConversationId } = require('../controllers/messageController');
+const router = express.Router();
+
+router.get('/', getAllMessages);
+router.get('/:conversationId', getMessageByConversationId);
+
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 module.exports = router;

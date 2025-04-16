@@ -1,19 +1,33 @@
 const Message = require('../models/Message');
+<<<<<<< HEAD
 const Conversation = require('../models/Conversation'); // Import model Conversation
 const { getIO } = require('../services/socket/socketService'); // Import hàm lấy instance IO
 const { mongoose } = require('mongoose'); // Import mongoose để kiểm tra ObjectId
+=======
+const { io } = require('../services/socket/socketService'); // Import Socket.IO từ file cấu hình
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 
 module.exports = {
     sendMessage: async (req, res) => {
         try {
+<<<<<<< HEAD
             const { conversationId, userId, content, messageType, linkURL, replyMessageId } = req.body;
+=======
+            const { conversationId, userId, content, messageType, linkURL } = req.body;
+
+            //   console.log("Received sendMessage request:", req.body);
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 
             if (!conversationId || !userId || !messageType) {
                 console.log("Invalid message data:", req.body);
                 return res.status(400).json({ message: "Invalid message data" });
             }
 
+<<<<<<< HEAD
             if (messageType === 'text' && !content?.trim() && !replyMessageId) {
+=======
+            if (messageType === 'text' && !content?.trim()) {
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
                 console.log("Text message cannot be empty.");
                 return res.status(400).json({ message: "Text message cannot be empty" });
             }
@@ -28,6 +42,7 @@ module.exports = {
                 userId,
                 content: content?.trim() || '',
                 messageType,
+<<<<<<< HEAD
                 linkURL: linkURL || null,
                 replyMessageId: replyMessageId || null
             });
@@ -42,6 +57,15 @@ module.exports = {
             });
 
             const io = getIO();
+=======
+                linkURL: linkURL || null
+            });
+
+            //  await newMessage.save();
+            //  console.log("Message saved to database:", newMessage);
+
+            // Phát sự kiện tới tất cả user trong phòng trò chuyện
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
             io.to(conversationId).emit("receiveMessage", newMessage);
             console.log(`Message sent to conversation ${conversationId}:`, newMessage);
 
@@ -62,7 +86,11 @@ module.exports = {
             }
 
             console.log(`Fetching messages for conversationId: ${conversationId}`);
+<<<<<<< HEAD
             const messages = await Message.find({ conversationId }).sort({ createdAt: 1 }).populate('userId', 'username avatar'); // Populate thông tin người gửi
+=======
+            const messages = await Message.find({ conversationId }).sort({ createdAt: 1 });
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
             console.log("Messages retrieved:", messages);
 
             res.status(200).json(messages);
@@ -70,6 +98,7 @@ module.exports = {
             console.error("Error when getting messages:", error);
             res.status(500).json({ message: "Error when getting messages" });
         }
+<<<<<<< HEAD
     },
 
     revokeMessage: async (req, res) => {
@@ -201,3 +230,7 @@ module.exports = {
     },
 
 };
+=======
+    }
+};
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6

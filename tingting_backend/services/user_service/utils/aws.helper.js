@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import AWS from "aws-sdk";
 import multer from "multer";
 import {
@@ -11,11 +12,23 @@ AWS.config.update({
   region: AWS_REGION,
   accessKeyId: AWS_ACCESS_KEY_ID,
   secretAccessKey: AWS_SECRET_ACCESS_KEY,
+=======
+import AWS from 'aws-sdk';
+import dotenv from 'dotenv';
+import multer from 'multer';
+dotenv.config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` });
+
+AWS.config.update({
+    region: process.env.AWS_REGION,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 });
 
 export const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
 export const S3 = new AWS.S3();
+<<<<<<< HEAD
 
 const storage = multer.memoryStorage({
   destination: function (req, file, callback) {
@@ -29,3 +42,19 @@ export const upload = multer({
     fileSize: 1024 * 1024 * 5,
   },
 }).single("avatar");
+=======
+const storage = multer.memoryStorage({
+    destination: function (req, file, callback) {
+        callback(null, '');
+    }
+});
+
+export const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 1024 * 1024 * 5
+    }
+}).single('avatar');
+
+
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6

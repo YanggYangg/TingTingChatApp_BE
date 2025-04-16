@@ -12,5 +12,8 @@ export const {
   AWS_SECRET_ACCESS_KEY,
   AWS_REGION,
   AWS_ACCESS_KEY_ID,
+<<<<<<< HEAD
   PORT_AUTH_SERVICE
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 } = process.env;

@@ -1,10 +1,20 @@
+<<<<<<< HEAD
 const Message = require('../../../models/Message');
 const Conversation = require('../../../models/Conversation');
+=======
+// src/services/socket/handlers/messaging.js
+const Message = require('../../../models/Message');
+const Conversation = require('../../../models/Conversation');
+
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 const logger = require('../../../utils/logger');
 const errorHandler = require('../../../utils/errorHandler');
 
 module.exports = {
+<<<<<<< HEAD
     // Xử lý gửi tin nhắn
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
     async handleSendMessage(socket, { conversationId, message }, userId, io) {
         if (!conversationId || !message) {
             return errorHandler(socket, 'Invalid message data');
@@ -36,7 +46,11 @@ module.exports = {
             const savedMessage = await newMessage.save();
             logger.info(`Message saved: ${savedMessage._id}`);
 
+<<<<<<< HEAD
             // Cập nhật tin nhắn cuối trong cuộc trò chuyện
+=======
+            // Update the last message in the conversation
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
             const conversation = await Conversation.findById(conversationId);
             if (conversation) {
                 conversation.lastMessage = savedMessage._id;
@@ -44,11 +58,19 @@ module.exports = {
                 await conversation.save();
                 logger.info(`Conversation updated: ${conversationId}`);
 
+<<<<<<< HEAD
                 // Emit các sự kiện
                 socket.to(conversationId).emit('receiveMessage', savedMessage);
                 socket.emit('messageSent', savedMessage);
 
                 // Emit thông tin cập nhật cuộc trò chuyện cho tất cả người dùng
+=======
+                // Emit events
+                socket.to(conversationId).emit('receiveMessage', savedMessage);
+                socket.emit('messageSent', savedMessage);
+
+                // Emit conversation update event to all users in the conversation
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
                 io.to(conversationId).emit('conversationUpdated', {
                     conversationId,
                     lastMessage: savedMessage,
@@ -59,6 +81,7 @@ module.exports = {
             errorHandler(socket, 'Failed to send message', error);
         }
     },
+<<<<<<< HEAD
 
     // Xử lý xóa tin nhắn
     async handleDeleteMessage(socket, { messageId }, userId, io) {
@@ -146,3 +169,40 @@ module.exports = {
         }
     }
 };
+=======
+    handleDeleteMessage(socket, { messageId, conversationId }, userId) {
+
+        if (!messageId || !conversationId) {
+            return errorHandler(socket, 'Invalid message data');
+        }
+        try {
+            // Xóa tin nhắn khỏi cơ sở dữ liệu
+            Message.findByIdAndDelete(messageId)
+                .then(() => {
+                    logger.info(`Message deleted: ${messageId}`);
+
+                    //load lại danh sách tin nhắn trong cuộc trò chuyện
+                    Message.find({ conversationId })
+                        .sort({ createdAt: -1 })
+                        .then((messages) => {
+                            socket.to(conversationId).emit('loadMessages', messages.reverse());
+                            socket.emit('messageDeleted', messageId);
+                        })
+                        .catch((error) => {
+                            errorHandler(socket, 'Failed to load messages after deletion', error);
+                        });
+                })
+                .catch((error) => {
+                    errorHandler(socket, 'Failed to delete message', error);
+                });
+
+
+        } catch (error) {
+            errorHandler(socket, 'Failed to delete message', error);
+
+        }
+    }
+
+
+};
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6

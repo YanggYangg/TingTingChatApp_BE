@@ -1,5 +1,9 @@
 import Profile from "../models/profile.model.js";
+<<<<<<< HEAD
 import { uploadImage } from "../utils/file.service.js";
+=======
+// import { uploadImage } from "../utils/file.service.js";
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 
 export const getProfiles = async (req, res) => {
   try {
@@ -20,7 +24,11 @@ export const getProfiles = async (req, res) => {
 };
 export const getProfile = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { id, phone } = req.params;
+=======
+    const { id } = req.params;
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
     const user = await Profile.findById(id).select("-password -__v");
     if (!user) {
       return res.status(404).json({
@@ -117,7 +125,10 @@ export const deleteProfile = async (req, res, next) => {
 
 export const uploadImage2 = async (req, res, next) => {
   try {
+<<<<<<< HEAD
     console.log("put image to s3");
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
     if (!req.file) {
       return res.status(400).json({
         status: "fail",
@@ -125,7 +136,12 @@ export const uploadImage2 = async (req, res, next) => {
       });
     }
     const fileUrl = await uploadImage(req.file);
+<<<<<<< HEAD
   
+=======
+    console.log("file = ", fileUrl);
+
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
     res.status(200).json({
       status: "success",
       message: "File uploaded successfully",

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // const Message = require('../models/messageModel');
 // const S3Service = require('../services/s3Service');
 
@@ -61,6 +62,8 @@
 
 // module.exports = new MessageController();
 
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 const Message = require('../models/messageModel');
 const S3Service = require('../services/s3Service');
 
@@ -74,6 +77,7 @@ class MessageController {
       const timestamp = new Date().toISOString();
       const message = new Message(userId, content, timestamp);
       await message.save();
+<<<<<<< HEAD
   
       const io = req.app.get('socketio');
       if (!io) {
@@ -94,6 +98,9 @@ class MessageController {
       io.emit('newMessage', messageData);
   
       res.status(201).json({ message: 'Tin nhắn đã được lưu và gửi real-time', data: message, status: 'SUCCESS' });
+=======
+      res.status(201).json({ message: 'Tin nhắn đã được lưu', data: message });
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
     } catch (error) {
       console.error('Error in sendMessage:', error.message);
       res.status(500).json({ error: error.message });
@@ -129,7 +136,11 @@ class MessageController {
   async deleteMessage(req, res) {
     try {
       const { messageId } = req.params;
+<<<<<<< HEAD
       const deletedMessage = await Message.deleteById(messageId);
+=======
+      const deletedMessage = await Message.deleteById(messageId); // Sửa ở đây: dùng Message.deleteById
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 
       if (!deletedMessage) {
         return res.status(404).json({ message: 'Không tìm thấy tin nhắn để xóa' });
@@ -138,11 +149,14 @@ class MessageController {
       // Xóa file và thumbnail trên S3 (nếu có)
       await S3Service.deleteFiles(deletedMessage.fileUrls, deletedMessage.thumbnailUrls);
 
+<<<<<<< HEAD
       // Lấy socket.io từ app
       const io = req.app.get('socketio');
       // Phát sự kiện messageDeleted tới tất cả client
       io.emit('messageDeleted', { messageId });
 
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
       res.status(200).json({ message: 'Tin nhắn và file liên quan đã được xóa' });
     } catch (error) {
       res.status(500).json({ error: error.message });

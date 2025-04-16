@@ -4,8 +4,12 @@ const socketService = require('./socketService');
 const logger = require('../../utils/logger');
 const { handleConnection } = require('./handlers/connection')
 const { handleJoinConversation, handleLeaveConversation, handleLoadConversations } = require('./handlers/conversation');
+<<<<<<< HEAD
 const { handleSendMessage, handleDeleteMessage, handleRevokeMessage } = require('./handlers/messaging');
 
+=======
+const { handleSendMessage } = require('./handlers/messaging');
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 const { handleTyping, handleStopTyping } = require('./handlers/typing');
 const { handleReadMessage } = require('./handlers/readStatus');
 const socketConfig = require('../../configs/socketConfig');
@@ -86,6 +90,7 @@ module.exports = {
                 await handleLoadConversations(socket, userId);
             });
 
+<<<<<<< HEAD
             socket.on('messageDeleted', (data) => {
                 if (!data.messageId) {
                     return logger.error('Invalid message ID provided on delete');
@@ -98,6 +103,10 @@ module.exports = {
                 }
                 handleRevokeMessage(socket, data, socket.handshake.query.userId, io);
             });
+=======
+
+
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 
         });
 

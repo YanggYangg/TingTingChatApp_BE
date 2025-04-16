@@ -22,6 +22,7 @@ module.exports = {
             res.status(500).json({ message: "Error when create conversation" });
         }
     },
+<<<<<<< HEAD
     createConversation2: async (req, res) => {
         try {
             const newConversation = new Conversation(req.body);
@@ -59,4 +60,6 @@ module.exports = {
             res.status(500).json({ message: 'Error fetching conversations', error: error.message });
         }
     },
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 };

@@ -16,5 +16,8 @@ export const {
   SMTP_PORT,
   KEY_FREESMS,
   DEVICE_NUMBER,
+<<<<<<< HEAD
   PORT_USER_SERVICE
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 } = process.env;

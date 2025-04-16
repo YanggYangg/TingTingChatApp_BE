@@ -1,10 +1,15 @@
 const express = require('express');
+<<<<<<< HEAD
 const { getAllConversations, createConversation, createConversation2, getAllConversationById } = require('../controllers/conversationController');
 const chatInfoController = require('../controllers/chatInfoController');
+=======
+const { getAllConversations, createConversation } = require('../controllers/conversationController');
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 const router = express.Router();
 
 router.get('/', getAllConversations);
 router.post('/createConversation', createConversation);
+<<<<<<< HEAD
 router.post('/createConversation2', createConversation2);
 router.get('/getAllConversationById/:userId', getAllConversationById);
 
@@ -38,5 +43,7 @@ router.get('/:conversationId/messages', chatInfoController.findMessages);
 
 
 
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
 
 module.exports = router;

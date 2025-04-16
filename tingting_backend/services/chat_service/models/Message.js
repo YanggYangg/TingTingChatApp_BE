@@ -28,6 +28,7 @@ const messageSchema = new mongoose.Schema({
         ref: 'Message',
         default: null
     },
+<<<<<<< HEAD
     isRevoked:{
         type: Boolean,
         default: false
@@ -36,6 +37,8 @@ const messageSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, //userId đã xóa tin nhắn này
         ref: 'User'
     }],
+=======
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
     linkURL: {
         type: String,
         default: null

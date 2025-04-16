@@ -27,7 +27,11 @@ export const uploadImage = async (file) => {
   const filePath = `${randomString(4)}-${new Date().getTime()}-${
     file?.originalname
   }`;
+<<<<<<< HEAD
   console.log("filePath = " , filePath);
+=======
+  
+>>>>>>> 7e746dcef74e46876ab5843319f2501a2f21aae6
   if (FILE_TYPE_MATCH.includes(file.mimetype) == -1) {
     throw new Error(`${file?.originalname} is not supported`);
   }
