@@ -4,6 +4,10 @@ const bcrypt = require('bcrypt');
 const axios = require('axios');
 const mongoose = require('mongoose');
 
+
+// Giả sử đây là base URL CHUNG của userService
+const USER_SERVICE_BASE_URL = 'http://3001/api/v1/profile';
+
 module.exports = {
     // Lấy thông tin nhóm/chat
     getChatInfo: async (req, res) => {
@@ -305,6 +309,111 @@ module.exports = {
             res.status(500).json({ error: error.message });
         }
     },
+    // getChatMedia: async (req, res) => {
+    //     try {
+    //         const { conversationId } = req.params;
+    //         const media = await Message.find({
+    //             conversationId: conversationId,
+    //             messageType: { $in: ['image', 'video'] }
+    //         }).lean();
+    //         console.log(`Lấy danh sách media trong chat ${conversationId}:`, media);
+
+    //         const senderIds = [...new Set(media.map(item => item.userId))]; // Sử dụng item.userId
+    //         const usersInfo = {};
+    //         console.log(`Danh sách userId trong media:`, senderIds);
+    //         if (senderIds.length > 0) {
+    //             try {
+    //                 const response = await axios.post(`${USER_SERVICE_BASE_URL}/bulk`, { userIds: senderIds });
+    //                 response.data.forEach(user => {
+    //                     usersInfo[user._id] = { firstname: user.firstname, surname: user.surname };
+    //                 });
+    //             } catch (error) {
+    //                 console.error("Lỗi khi gọi userService để lấy thông tin người dùng:", error);
+    //             }
+    //         }
+
+    //         const mediaWithUserInfo = media.map(item => ({
+    //             ...item,
+    //             senderInfo: usersInfo[item.userId] || { firstname: 'Không', surname: 'tên' } // Sử dụng item.userId
+    //         }));
+
+    //         console.log(`Lấy danh sách media trong chat ${conversationId} (có thông tin user):`, mediaWithUserInfo);
+    //         res.json(mediaWithUserInfo.length ? mediaWithUserInfo : []);
+    //     } catch (error) {
+    //         console.error(`Lỗi khi lấy danh sách media:`, error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
+
+    // getChatFiles: async (req, res) => {
+    //     try {
+    //         const { conversationId } = req.params;
+    //         const files = await Message.find({
+    //             conversationId: conversationId,
+    //             messageType: 'file'
+    //         }).lean();
+
+    //         const senderIds = [...new Set(files.map(item => item.sender))];
+    //         const usersInfo = {};
+
+    //         if (senderIds.length > 0) {
+    //             try {
+    //                 const response = await axios.post(`${USER_SERVICE_BASE_URL}/bulk`, { userIds: senderIds });
+    //                 response.data.forEach(user => {
+    //                     usersInfo[user._id] = { firstname: user.firstname, surname: user.surname };
+    //                 });
+    //             } catch (error) {
+    //                 console.error("Lỗi khi gọi userService để lấy thông tin người dùng:", error);
+    //             }
+    //         }
+
+    //         const filesWithUserInfo = files.map(item => ({
+    //             ...item,
+    //             senderInfo: usersInfo[item.sender] || { firstname: 'Không', surname: 'tên' }
+    //         }));
+
+    //         console.log(`Lấy danh sách file trong chat ${conversationId} (có thông tin user):`, filesWithUserInfo);
+    //         res.json(filesWithUserInfo.length ? filesWithUserInfo : []);
+    //     } catch (error) {
+    //         console.error(`Lỗi khi lấy danh sách file:`, error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
+
+    // getChatLinks: async (req, res) => {
+    //     try {
+    //         const { conversationId } = req.params;
+    //         const links = await Message.find({
+    //             conversationId: conversationId,
+    //             messageType: 'link'
+    //         }).lean();
+
+    //         const senderIds = [...new Set(links.map(item => item.sender))];
+    //         const usersInfo = {};
+
+    //         if (senderIds.length > 0) {
+    //             try {
+    //                 const response = await axios.post(`${USER_SERVICE_BASE_URL}/bulk`, { userIds: senderIds });
+    //                 response.data.forEach(user => {
+    //                     usersInfo[user._id] = { firstname: user.firstname, surname: user.surname };
+    //                 });
+    //             } catch (error) {
+    //                 console.error("Lỗi khi gọi userService để lấy thông tin người dùng:", error);
+    //             }
+    //         }
+
+    //         const linksWithUserInfo = links.map(item => ({
+    //             ...item,
+    //             senderInfo: usersInfo[item.sender] || { firstname: 'Không', surname: 'tên' }
+    //         }));
+
+    //         console.log(`Lấy danh sách link trong chat ${conversationId} (có thông tin user):`, linksWithUserInfo);
+    //         res.json(linksWithUserInfo.length ? linksWithUserInfo : []);
+    //     } catch (error) {
+    //         console.error(`Lỗi khi lấy danh sách link:`, error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
     // Lấy toàn bộ media, file và link đã gửi trong nhóm
     getChatStorage: async (req, res) => {
         try {
@@ -442,30 +551,30 @@ module.exports = {
     hideChat: async (req, res) => {
         const { conversationId } = req.params;
         const { userId, isHidden, pin } = req.body;
-    
+
         try {
             console.log(`[HIDE CHAT] Processing request for conversation ID: ${conversationId}, user ID: ${userId}, hide status: ${isHidden}`);
-    
+
             // Validate required fields
             if (!userId) {
                 console.warn(`[HIDE CHAT] Missing 'userId' in request body for conversation ${conversationId}.`);
                 return res.status(400).json({ error: "Missing userId" });
             }
-    
+
             // Find the conversation
             const chat = await Conversation.findById(conversationId);
             if (!chat) {
                 console.warn(`[HIDE CHAT] Conversation not found: ${conversationId}.`);
                 return res.status(404).json({ error: "Conversation not found" });
             }
-    
+
             // Find the participant
             const participant = chat.participants.find(p => p.userId === userId);
             if (!participant) {
                 console.warn(`[HIDE CHAT] User ${userId} is not a participant in conversation ${conversationId}.`);
                 return res.status(404).json({ error: "User not found in this conversation" });
             }
-    
+
             // Update isHidden status and handle PIN
             participant.isHidden = isHidden;
             if (isHidden && pin) {
@@ -476,14 +585,14 @@ module.exports = {
                 participant.pin = null;
                 console.log(`[HIDE CHAT] User ${userId} unhid conversation ${conversationId}.`);
             }
-    
+
             // Update the conversation's updateAt timestamp and save
             chat.updateAt = Date.now();
             await chat.save();
-    
+
             console.log(`[HIDE CHAT] Successfully updated hide status for user ${userId} in conversation ${conversationId}.`);
             res.json(chat);
-    
+
         } catch (error) {
             console.error(`[HIDE CHAT] Error while hiding/unhiding conversation ${conversationId} for user ${userId}:`, error);
             res.status(500).json({ error: "Failed to hide/unhide conversation.", details: error.message });
@@ -631,7 +740,7 @@ module.exports = {
         try {
             const { conversationId } = req.params;
             const { searchTerm } = req.query; // Lấy từ khóa tìm kiếm từ query string
- 
+
             console.log(`Tìm kiếm tin nhắn trong nhóm ${conversationId} với từ khóa "${searchTerm}"`);
             if (!searchTerm) {
                 return res.status(400).json({ message: "Thiếu từ khóa tìm kiếm." });
@@ -644,7 +753,7 @@ module.exports = {
                 content: { $regex: searchTerm, $options: 'i' } // Tìm kiếm không phân biệt chữ hoa chữ thường
             })
 
-            
+
             console.log(`Kết quả tìm kiếm:`, messages);
             res.json(messages);
         } catch (error) {
