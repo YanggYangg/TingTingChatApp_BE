@@ -154,7 +154,7 @@ module.exports = {
                 const newMessage = new Message({
                     conversationId: targetConversationId,
                     userId: userId,
-                    content: content ? `${content}\n\n--- Forwarded Message ---\n${originalMessage.content}` : `--- Forwarded Message ---\n${originalMessage.content}`,
+                    content: content ? `${content}\n\n${originalMessage.content}` : `\n${originalMessage.content}`,
                     messageType: originalMessage.messageType,
                     linkURL: originalMessage.linkURL,
                     replyMessageId: originalMessage.replyMessageId,
