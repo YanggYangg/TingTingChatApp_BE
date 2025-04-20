@@ -71,6 +71,14 @@ export const respondToFriendRequest = async (req, res) => {
         .status(400)
         .json({ message: "Friend request already handled" });
     }
+
+    if (action === "rejected") {
+          await FriendRequest.findByIdAndDelete(requestId);
+          return res.status(200).json({
+            message: "Friend request rejected and deleted",
+          });
+        }
+
     request.status = action;
     await request.save();
 
@@ -118,7 +126,10 @@ export const getReceivedRequests = async (req, res) => {
   try{
     const { userId } = req.params;
 
-    const receivedRequests = await FriendRequest.find({ recipient: userId})
+    const receivedRequests = await FriendRequest.find({ 
+      recipient: userId,
+      status: "pending" // Chi lay yeu cau ket ban dang cho
+    })
     .populate("requester", "firstname surname phone avatar")
     .sort({ createdAt: -1 });
     res.status(200).json({ message: "Received friend requests", data: receivedRequests });
@@ -126,6 +137,7 @@ export const getReceivedRequests = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 //Tat ca ban be cua user
 export const getFriends = async (req, res) => {
