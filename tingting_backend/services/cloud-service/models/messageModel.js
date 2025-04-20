@@ -1,21 +1,14 @@
-const DynamoDBService = require("../services/dynamodbService");
+const DynamoDBService = require('../services/dynamodbService');
 
 class Message {
-  constructor(
-    userId,
-    content,
-    timestamp,
-    fileUrls = null,
-    thumbnailUrls = null,
-    filenames = null
-  ) {
-    this.messageId = require("uuid").v4();
+  constructor(userId, content, timestamp, fileUrls = null, thumbnailUrls = null, filenames = null) {
+    this.messageId = require('uuid').v4();
     this.userId = userId;
     this.content = content;
     this.timestamp = timestamp;
     this.fileUrls = fileUrls;
     this.thumbnailUrls = thumbnailUrls;
-    this.filenames = filenames; // Thêm trường mới
+    this.filenames = filenames;
   }
 
   async save() {
@@ -28,6 +21,10 @@ class Message {
 
   static async findByUserId(userId) {
     return DynamoDBService.getMessagesByUserId(userId);
+  }
+
+  static async deleteById(messageId) {
+    return DynamoDBService.deleteMessage(messageId);
   }
 }
 
