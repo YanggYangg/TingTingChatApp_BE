@@ -262,19 +262,20 @@ module.exports = {
     // Lấy danh sách ảnh/video đã gửi trong nhóm
     getChatMedia: async (req, res) => {
         try {
-            const { conversationId } = req.params;
-            const media = await Message.find({
-                conversationId: conversationId,
-                messageType: { $in: ['image', 'video'] }
-            });
-
-            console.log(`Lấy danh sách media trong chat ${conversationId}:`, media);
-            res.json(media.length ? media : []); // Trả về mảng rỗng nếu không có dữ liệu
+          const { conversationId } = req.params;
+          const media = await Message.find({
+            conversationId: conversationId,
+            messageType: { $in: ['image', 'video'] },
+            linkURL: { $exists: true, $ne: [] }, // Chỉ lấy tin nhắn có linkURL không rỗng
+          }).select('_id messageType content linkURL userId createdAt');
+      
+          console.log(`Lấy danh sách media trong chat ${conversationId}:`, media);
+          res.json(media.length ? media : []);
         } catch (error) {
-            console.error(`Lỗi khi lấy danh sách media:`, error);
-            res.status(500).json({ error: error.message });
+          console.error(`Lỗi khi lấy danh sách media:`, error);
+          res.status(500).json({ error: error.message });
         }
-    },
+      },
 
     // Lấy danh sách file đã gửi trong nhóm
     getChatFiles: async (req, res) => {

@@ -1,4 +1,5 @@
 const Conversation = require('../models/Conversation');
+const Message = require('../models/Message'); // Import model Message
 
 module.exports = {
     getAllConversations: async (req, res) => {
@@ -59,4 +60,59 @@ module.exports = {
             res.status(500).json({ message: 'Error fetching conversations', error: error.message });
         }
     },
+    deleteConversationHistory: async (req, res) => {
+        const { conversationId } = req.params;
+        // const userId = req.user._id; // Không sử dụng userId nữa
+      
+        try {
+          // 1. Tìm cuộc trò chuyện
+          const conversation = await Conversation.findById(conversationId);
+          if (!conversation) {
+            return res.status(404).json({ message: 'Conversation not found' });
+          }
+      
+          // 2. Bỏ qua bước kiểm tra quyền
+      
+          // 3. Xóa tất cả tin nhắn liên quan đến cuộc trò chuyện
+          const deleteResult = await Message.deleteMany({ conversationId: conversationId });
+      
+          // 4. Không xóa cuộc trò chuyện
+      
+          res.status(200).json({
+            message: `Message history for conversation ID ${conversationId} has been deleted successfully.`,
+            deletedMessagesCount: deleteResult.deletedCount,
+          });
+      
+        } catch (error) {
+          console.error('Error deleting conversation history:', error);
+          res.status(500).json({ message: 'Internal server error' });
+        }
+      },
+      disbandGroup: async (req, res) => {
+        const { conversationId } = req.params;
+        const { userId } = req.body; // Assuming the user's ID is in the request body
+
+        try {
+            // 1. Find the conversation
+            const conversation = await Conversation.findById(conversationId);
+            if (!conversation) {
+                return res.status(404).json({ message: 'Conversation not found' });
+            }
+
+            // 2. Check if it's a group conversation
+            if (!conversation.isGroup) {
+                return res.status(400).json({ message: 'This is not a group conversation' });
+            }
+
+            // Bỏ bước kiểm tra quyền admin
+
+            // 4. Delete the conversation
+            await Conversation.findByIdAndDelete(conversationId);
+
+            res.status(200).json({ message: 'Group disbanded successfully' });
+        } catch (error) {
+            console.error('Error disbanding group:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
 };
