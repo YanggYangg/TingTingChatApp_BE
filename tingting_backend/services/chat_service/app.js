@@ -35,6 +35,8 @@ app.use("/conversations", conversationRoutes);
 app.use("/messages", messageRoutes);
 app.use("/chats", chatRoutes);
 app.use("/calls", callRoutes);
+
+app.use("/api/conversations", callRoutes);
 connectDB();
 
 app.get("/", (req, res) => {
