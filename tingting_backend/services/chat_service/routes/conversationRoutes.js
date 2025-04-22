@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllConversations, createConversation, createConversation2, getAllConversationById } = require('../controllers/conversationController');
+const { getAllConversations, createConversation, createConversation2, getAllConversationById , deleteConversationHistory,disbandGroup} = require('../controllers/conversationController');
 const chatInfoController = require('../controllers/chatInfoController');
 const router = express.Router();
 
@@ -27,16 +27,16 @@ router.put('/:conversationId/hide', chatInfoController.hideChat);
 router.put('/:conversationId/pin', chatInfoController.pinChat);
 
 // Xóa toàn bộ cuộc trò chuyện phía tôi
-router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
+// router.delete('/:conversationId', chatInfoController.deleteChatHistoryForMe);
 
 // Danh sách nhóm chung
 router.get('/:conversationId/common', chatInfoController.getCommonGroups);
 router.get('/:conversationId/available', chatInfoController.getAvailableMembers);
 router.get('/:conversationId/messages', chatInfoController.findMessages);
-
+// deleteConversationHistory
+router.delete('/:conversationId', deleteConversationHistory); // Xóa cuộc trò chuyện
 // router.delete('/delete-all', chatController.deleteAllMessagesInConversationForMe);
 
-
-
+router.delete('/disbandGroup/:conversationId', disbandGroup); // Xóa nhóm
 
 module.exports = router;

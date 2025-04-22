@@ -154,7 +154,9 @@ module.exports = {
                 const newMessage = new Message({
                     conversationId: targetConversationId,
                     userId: userId,
-                    content: content ? `${content}\n\n--- Forwarded Message ---\n${originalMessage.content}` : `--- Forwarded Message ---\n${originalMessage.content}`,
+                    content: content
+                        ? `\n${originalMessage.content}\n\n${content}`
+                        : `\n${originalMessage.content}`,
                     messageType: originalMessage.messageType,
                     linkURL: originalMessage.linkURL,
                     replyMessageId: originalMessage.replyMessageId,
@@ -199,5 +201,6 @@ module.exports = {
             res.status(500).json({ message: "Error when forwarding message." });
         }
     },
+
 
 };
