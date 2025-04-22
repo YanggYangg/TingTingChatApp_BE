@@ -4,25 +4,47 @@ const storage = multer.memoryStorage(); // Lưu file vào bộ nhớ dưới d�
 
 const fileFilter = (req, file, cb) => {
     const allowedTypes = [
-        'image/jpeg', 
-        'image/png', 
-        'image/gif', 
+        // Ảnh
+        'image/jpeg',
+        'image/png',
+        'image/gif',
         'image/jpg',
+        'image/webp',
+
+        // Video
         'video/mp4',
-        'video/quicktime', // .mov
-        'video/x-msvideo', // .avi
-        'video/x-matroska', // .mkv
-        'text/plain',  // Cho phép file văn bản (txt)
-        'application/pdf',  // Cho phép file PDF
-        'application/msword',  // Cho phép file DOC
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'  // Cho phép file DOCX
+        'video/quicktime',
+        'video/x-msvideo',
+        'video/x-matroska',
+
+        // Văn bản
+        'text/plain',
+        'application/pdf',
+
+        // Word
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+
+        // Excel
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+        // PowerPoint
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+        // File nén
+        'application/zip',
+        'application/x-rar-compressed',
     ];
+
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Only images are allowed'), false);
+        cb(new Error('File type not allowed'), false);
     }
 };
+
 
 const upload = multer({
     storage,

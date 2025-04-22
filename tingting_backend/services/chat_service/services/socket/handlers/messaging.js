@@ -24,7 +24,10 @@ module.exports = {
                 userId,
                 content: message.content?.trim() || '',
                 messageType: message.messageType,
-                linkURL: message.linkURL || null,
+                replyMessageId: message.replyMessageId || null,
+                isRevoked: false,
+                deletedBy: [],
+                linkURL: message.linkURL || [],
                 status: {
                     sent: true,
                     receivedBy: [],
@@ -62,14 +65,22 @@ module.exports = {
 
     // Xử lý xóa tin nhắn
     async handleDeleteMessage(socket, { messageId }, userId, io) {
+
+
         try {
             const message = await Message.findById(messageId);
             if (!message) return errorHandler(socket, 'Message not found');
 
-            await Message.updateOne(
+            const result = await Message.updateOne(
                 { _id: messageId },
                 { $addToSet: { deletedBy: userId } }
             );
+
+            if (result.modifiedCount === 0) {
+                return errorHandler(socket, 'Failed to delete message');
+            } else {
+                logger.info(`Message deleted by user ${userId}: ${messageId}`);
+            }
 
             const conversation = await Conversation.findById(message.conversationId);
             if (!conversation) return errorHandler(socket, 'Conversation not found');

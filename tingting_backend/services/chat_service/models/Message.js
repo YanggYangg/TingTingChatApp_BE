@@ -15,7 +15,7 @@ const messageSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required: true
+
     },
     messageType: {
         type: String,
@@ -28,18 +28,19 @@ const messageSchema = new mongoose.Schema({
         ref: 'Message',
         default: null
     },
-    isRevoked:{
+    isRevoked: {
         type: Boolean,
         default: false
     },
-    deleteBt:[{
+    deletedBy: [{
         type: mongoose.Schema.Types.ObjectId, //userId đã xóa tin nhắn này
         ref: 'User'
     }],
-    linkURL: {
+
+    linkURL: [{
         type: String,
         default: null
-    },
+    }],
     status: {
         sent: {
             type: Boolean,
