@@ -4,7 +4,7 @@ import { uploadImage } from "../utils/file.service.js";
 export const getProfiles = async (req, res) => {
   try {
     const users = await Profile.find();
-    //console.log("All USERS: ", users);
+    console.log("All USERS: ", users);
     res.status(200).json({
       status: "success",
       data: {

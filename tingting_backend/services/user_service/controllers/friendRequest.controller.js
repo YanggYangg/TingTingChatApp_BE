@@ -71,6 +71,14 @@ export const respondToFriendRequest = async (req, res) => {
         .status(400)
         .json({ message: "Friend request already handled" });
     }
+
+    if (action === "rejected") {
+      await FriendRequest.findByIdAndDelete(requestId);
+      return res.status(200).json({
+        message: "Friend request rejected and deleted",
+      });
+    }
+
     request.status = action;
     await request.save();
 
@@ -118,7 +126,10 @@ export const getReceivedRequests = async (req, res) => {
   try{
     const { userId } = req.params;
 
-    const receivedRequests = await FriendRequest.find({ recipient: userId})
+    const receivedRequests = await FriendRequest.find({ 
+      recipient: userId,
+      status: "pending" // Chi lay yeu cau ket ban dang cho
+    })
     .populate("requester", "firstname surname phone avatar")
     .sort({ createdAt: -1 });
     res.status(200).json({ message: "Received friend requests", data: receivedRequests });
@@ -182,9 +193,10 @@ export const cancelFriendRequest = async (req, res) => {
 //Huy ket ban
 export const unfriend = async (req, res) => {
   try{
+    console.log("Dữ liệu nhận được từ frontend:", req.body);
     const { userId1, userId2 } = req.body;
 
-    const request = await FriendRequest.findOneAndDelete({
+    const deleted = await FriendRequest.findOneAndDelete({
       status: "accepted",
       $or: [
         { requester: userId1, recipient: userId2 },
@@ -192,7 +204,7 @@ export const unfriend = async (req, res) => {
       ]
     });
 
-    if(!request) {
+    if(!deleted) {
       return res.status(404).json({ message: "No friendship found to unfriend" });
     }
 
@@ -256,6 +268,7 @@ export const checkFriendStatus = async (req, res) => {
   }
 }
 
+//Danh sach bbe
 export const getFriendsList = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -284,3 +297,23 @@ export const getFriendsList = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
+export const getSentPendingRequests = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const pendingRequests = await FriendRequest.find({
+      requester: userId,
+      status: "pending"
+    })
+      .populate("recipient", "firstname surname phone avatar")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ message: "Pending sent friend requests", data: pendingRequests });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+
+
