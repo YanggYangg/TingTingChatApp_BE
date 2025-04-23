@@ -5,7 +5,8 @@ import { getProfile,
     updateProfile, 
     deleteProfile, 
     uploadImage2,
-    getUserPhone
+    getUserPhone,
+    searchUserByPhone
  } from "../controllers/profile.controller.js";
 import { authorize } from "../middlewares/auth.middleware.js";
 import { upload } from "../utils/aws.helper.js";
@@ -20,6 +21,7 @@ profileRouter.post("/:id", authorize , updateProfile);
 profileRouter.delete("/:id", authorize, deleteProfile);
 profileRouter.put("/upload", authorize, upload, uploadImage2 );
 profileRouter.get("/getUserPhone/:id", getUserPhone);
+profileRouter.get("/searchUserByPhone", searchUserByPhone);
 
 
 

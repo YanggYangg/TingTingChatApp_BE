@@ -152,6 +152,41 @@ export const getUserPhone = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 
+  
+
 };
+
+export const searchUserByPhone = async (req, res) => {
+  try {
+    const { phone } = req.query; // Lấy số điện thoại từ query
+    console.log("Phone number to search:", phone);
+
+    if (!phone) {
+      return res.status(400).json({ message: "Phone query parameter is required" });
+    }
+
+    // Làm sạch số điện thoại (loại bỏ khoảng trắng, ký tự đặc biệt không cần thiết)
+    const cleanPhone = phone.trim();
+
+    // Tìm kiếm người dùng có số điện thoại gần giống (sử dụng regex để tìm kiếm gần đúng)
+    const users = await Profile.find({ phone: { $regex: new RegExp(phone, 'i') } })
+  .select("firstname surname phone avatar");
+
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users found with the provided phone number" });
+    }
+
+    return res.status(200).json(users); // Trả về danh sách người dùng tìm được
+  } catch (error) {
+    console.error("Error searching for users by phone:", error);
+    return res.status(500).json({
+      message: error.message || "Server error",
+      error: error.stack // Log chi tiết lỗi để biết nguyên nhân cụ thể
+    });
+  }
+};
+
+
 
 
