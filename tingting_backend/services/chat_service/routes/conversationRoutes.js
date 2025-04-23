@@ -1,9 +1,17 @@
 const express = require('express');
-const { getAllConversations, createConversation, createConversation2, getAllConversationById } = require('../controllers/conversationController');
+const { getAllConversations, 
+    createConversation, 
+    createConversation2, 
+    getAllConversationById,
+    getAllGroups,
+    getUserJoinGroup
+  } = require('../controllers/conversationController');
 const chatInfoController = require('../controllers/chatInfoController');
 const router = express.Router();
 
 router.get('/', getAllConversations);
+router.get('/groups', getAllGroups);
+router.get('/userGroups/:userId', getUserJoinGroup);
 router.post('/createConversation', createConversation);
 router.post('/createConversation2', createConversation2);
 router.get('/getAllConversationById/:userId', getAllConversationById);
@@ -35,7 +43,6 @@ router.get('/:conversationId/available', chatInfoController.getAvailableMembers)
 router.get('/:conversationId/messages', chatInfoController.findMessages);
 
 // router.delete('/delete-all', chatController.deleteAllMessagesInConversationForMe);
-
 
 
 

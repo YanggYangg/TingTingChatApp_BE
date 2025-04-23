@@ -81,7 +81,7 @@ export const respondToFriendRequest = async (req, res) => {
 
     request.status = action;
     await request.save();
-
+    
     //Neu chap nhan => goi sang chat_service de tao conversation
     if(action === "accepted"){
       try {
@@ -208,7 +208,14 @@ export const unfriend = async (req, res) => {
       return res.status(404).json({ message: "No friendship found to unfriend" });
     }
 
-    return res.status(200).json({ message: "Unfriended successfully" });
+    //return res.status(200).json({ message: "Unfriended successfully" });
+    return res.status(200).json({
+      message: "Unfriended successfully",
+      data: {
+        requester: deleted.requester,
+        recipient: deleted.recipient,
+      },
+    });
   }catch (error) {
     res.status(500).json({ message: error.message });
   }

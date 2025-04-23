@@ -10,8 +10,35 @@ module.exports = {
             console.log("=====Khong get duoc Conversations=====");
             res.status(500).json({ message: "Error when get all conversations" });
         }
-    }
-    ,
+    },
+    getAllGroups: async (req, res) => {
+        try{
+            const groups = await Conversation.find({ isGroup: true });
+            console.log("=====Test console Groups=====:", groups);
+            res.status(200).json(groups);
+        }catch(error){
+            console.log("=====Khong get duoc Groups=====");
+            res.status(500).json({ message: "Error when get all groups" });
+        }
+    },
+    getUserJoinGroup: async (req, res) => {
+        const userId = req.params.userId;
+        try{
+            const userGroups = await Conversation.find({
+                isGroup: true,
+                "participants.userId": userId 
+            });
+            if (userGroups.length === 0) {
+                return res.status(404).json({ message: 'Người dùng không tham gia nhóm nào.' });
+              }
+          
+              res.status(200).json(userGroups);
+        }catch (error) {
+            console.error('Lỗi khi lấy nhóm người dùng tham gia:', error);
+            res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy thông tin nhóm.' });
+          }
+
+    },
     createConversation: async (req, res) => {
         try {
             const newConversation = new Conversation(req.body);
@@ -59,4 +86,5 @@ module.exports = {
             res.status(500).json({ message: 'Error fetching conversations', error: error.message });
         }
     },
+
 };
