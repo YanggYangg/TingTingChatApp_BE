@@ -8,6 +8,7 @@ const conversationRoutes = require("./routes/conversationRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const callRoutes = require("./routes/callRoutes");
+const socketModule = require('./services/socket/index');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,13 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+
+
+// Truyền io vào controller
+app.use((req, res, next) => {
+  req.io = socketModule.getIo();
+  next();
+});
 
 app.use("/conversations", conversationRoutes);
 app.use("/messages", messageRoutes);
