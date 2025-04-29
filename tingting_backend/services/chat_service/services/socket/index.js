@@ -103,4 +103,12 @@ module.exports = {
 
         return io;
     },
+
+    // Nhi thêm để lấy socket io instance từ bên ngoài
+    getIo() {
+        if (!ioInstance) {
+            throw new Error('Socket.IO not initialized');
+        }
+        return ioInstance;
+    },
 };

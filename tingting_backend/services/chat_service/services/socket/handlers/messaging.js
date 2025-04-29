@@ -24,6 +24,9 @@ module.exports = {
                 userId,
                 content: message.content?.trim() || '',
                 messageType: message.messageType,
+                replyMessageId: message.replyMessageId || null,
+                isRevoked: false,
+                deletedBy: [],
                 linkURL: message.linkURL || null,
                 status: {
                     sent: true,
