@@ -21,9 +21,11 @@ const {
 } = require("./handlers/call");
 const socketConfig = require("../../configs/socketConfig");
 
+let io; // Khai báo biến io ở đây để có thể sử dụng trong các hàm khác
+
 module.exports = {
   initializeSocket(server) {
-    const io = new Server(server, socketConfig);
+    io = new Server(server, socketConfig);
     socketService.init(io);
 
     io.on("connection", (socket) => {
@@ -151,11 +153,11 @@ module.exports = {
     return io;
   },
 
-  // Nhi thêm để truyền io vào controller
+  // Nhi thêm để truyền io vào controller // Sử dụng ioInstance đã được lưu trữ
   getIo() {
-    if (!ioInstance) {
+    if (!io) {
       throw new Error('Socket.IO not initialized');
     }
-    return ioInstance;
+    return io;
   },
 };
