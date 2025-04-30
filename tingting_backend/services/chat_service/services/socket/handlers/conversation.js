@@ -79,4 +79,25 @@ module.exports = {
   getUserConversations(userId) {
     return userConversationMap[userId] || [];
   },
+  createGroupConversation: async (socket, { name, participants }, userId) => {
+    if (!name || !participants || participants.length === 0) {
+      return errorHandler(socket, "Invalid group conversation data");
+    }
+
+    try {
+      const newConversation = await Conversation.create({
+        name,
+        participants: [{ userId }, ...participants],
+      });
+
+      socket.join(newConversation._id.toString());
+
+      // Gửi thông báo về việc tạo cuộc trò chuyện mới cho tất cả người tham gia
+      socket.to(newConversation._id.toString()).emit("newGroupConversation", newConversation);
+
+      logger.info(`Created new group conversation ${newConversation._id}`);
+    } catch (error) {
+      errorHandler(socket, "Failed to create group conversation", error);
+    }
+  }
 };
