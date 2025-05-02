@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema({
     conversationId: {
@@ -19,7 +19,7 @@ const messageSchema = new mongoose.Schema({
     },
     messageType: {
         type: String,
-        enum: ['text', 'image', 'file', 'video', 'audio', 'reply', 'emoji', 'sticker', 'location', 'link'],
+        enum: ['text', 'image', 'file', 'video', 'audio', 'reply', 'emoji', 'sticker', 'location', 'link', 'call'],
         required: true
     },
     // nếu là reply thì link tới tin nhắn gốc
