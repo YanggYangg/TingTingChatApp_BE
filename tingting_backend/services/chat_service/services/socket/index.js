@@ -49,18 +49,11 @@ module.exports = {
   initializeSocket(server) {
     const io = new Server(server, socketConfig);
     socketService.init(io);
-  initializeSocket(server) {
-    const io = new Server(server, socketConfig);
-    socketService.init(io);
 
     io.on("connection", (socket) => {
       logger.info(`Client connected: ${socket.id}`);
       handleConnection(socket, io);
-    io.on("connection", (socket) => {
-      logger.info(`Client connected: ${socket.id}`);
-      handleConnection(socket, io);
 
-      const userConversations = {};
       const userConversations = {};
 
       // Join conversation
@@ -154,115 +147,7 @@ module.exports = {
         }
         await handleLoadConversations(socket, userId);
       });
-      // Join conversation
-      socket.on("joinConversation", (data) => {
-        if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on join" });
-          return logger.error("Invalid conversation ID provided on join");
-        }
-        if (!userConversations[socket.handshake.query.userId]) {
-          userConversations[socket.handshake.query.userId] = [];
-        }
-        userConversations[socket.handshake.query.userId].push(data.conversationId);
-        handleJoinConversation(socket, data, socket.handshake.query.userId);
-      });
 
-      // Leave conversation
-      socket.on("leaveConversation", (data) => {
-        if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on leave" });
-          return logger.error("Invalid conversation ID provided on leave");
-        }
-        handleLeaveConversation(socket, data, socket.handshake.query.userId);
-      });
-
-      // Send message
-      socket.on("sendMessage", (data) => {
-        if (!data.conversationId || !data.message) {
-          socket.emit("error", { message: "Invalid message data provided" });
-          return logger.error("Invalid message data provided");
-        }
-        handleSendMessage(socket, data, socket.handshake.query.userId, io);
-      });
-
-      // Typing events
-      socket.on("typing", (data) => {
-        if (!data.conversationId || !socket.handshake.query.userId) {
-          socket.emit("error", { message: "Invalid typing data" });
-          return logger.error("Invalid typing data");
-        }
-        handleTyping(socket, data, socket.handshake.query.userId);
-      });
-
-      socket.on("stopTyping", (data) => {
-        if (!data.conversationId || !socket.handshake.query.userId) {
-          socket.emit("error", { message: "Invalid stop typing data" });
-          return logger.error("Invalid stop typing data");
-        }
-        handleStopTyping(socket, data, socket.handshake.query.userId);
-      });
-
-      // Read message
-      socket.on("readMessage", (data) => {
-        if (!data.conversationId || !data.messageId || !socket.handshake.query.userId) {
-          socket.emit("error", { message: "Invalid read message data" });
-          return logger.error("Invalid read message data");
-        }
-        handleReadMessage(socket, data, socket.handshake.query.userId, io);
-      });
-
-      // Call events
-      socket.on("initiateCall", (data) => {
-        if (!data.conversationId || !data.callerId || !data.receiverId || !data.callType) {
-          socket.emit("error", { message: "Invalid call initiation data" });
-          return logger.error("Invalid call initiation data");
-        }
-        handleInitiateCall(socket, data, io);
-      });
-
-      socket.on("answerCall", (data) => {
-        if (!data.callId) {
-          socket.emit("error", { message: "Invalid call answer data" });
-          return logger.error("Invalid call answer data");
-        }
-        handleAnswerCall(socket, data, socket.handshake.query.userId, io);
-      });
-
-      socket.on("endCall", (data) => {
-        if (!data.callId || !data.reason) {
-          socket.emit("error", { message: "Invalid call end data" });
-          return logger.error("Invalid call end data");
-        }
-        handleEndCall(socket, data, socket.handshake.query.userId, io);
-      });
-
-      // Load conversations
-      socket.on("loadConversations", async () => {
-        const userId = socket.handshake.query.userId;
-        if (!userId) {
-          socket.emit("error", { message: "Invalid user ID provided on loadConversations" });
-          return logger.error("Invalid user ID provided on loadConversations");
-        }
-        await handleLoadConversations(socket, userId);
-      });
-
-      // Delete message (from messaging handler)
-      socket.on("messageDeleted", (data) => {
-        if (!data.messageId) {
-          socket.emit("error", { message: "Invalid message ID provided on delete" });
-          return logger.error("Invalid message ID provided on delete");
-        }
-        handleDeleteMessageMessaging(socket, data, socket.handshake.query.userId, io);
-      });
-
-      // Revoke message
-      socket.on("messageRevoked", (data) => {
-        if (!data.messageId) {
-          socket.emit("error", { message: "Invalid message ID provided on revoke" });
-          return logger.error("Invalid message ID provided on revoke");
-        }
-        handleRevokeMessage(socket, data, socket.handshake.query.userId, io);
-      });
       // Delete message (from messaging handler)
       socket.on("messageDeleted", (data) => {
         if (!data.messageId) {

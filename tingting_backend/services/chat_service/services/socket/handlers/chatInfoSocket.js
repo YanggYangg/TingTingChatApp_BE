@@ -3,27 +3,9 @@ const Message = require("../../../models/Message");
 const logger = require("../../../utils/logger");
 const errorHandler = require("../../../utils/errorHandler");
 const bcrypt = require("bcrypt");
-const { handleConversationRemoved } = require("./conversation");
+const {handleConversationRemoved} = require("./conversation");
 const mongoose = require("mongoose");
 
-
-// Chuẩn hóa payload cho chatInfoUpdated
-const createChatInfoPayload = (chat) => ({
-  _id: chat._id,
-  name: chat.name,
-  isGroup: chat.isGroup,
-  imageGroup: chat.imageGroup,
-  participants: chat.participants.map((p) => ({
-    _id: p._id,
-    userId: p.userId,
-    role: p.role,
-    isPinned: p.isPinned,
-    isHidden: p.isHidden,
-    mute: p.mute,
-  })),
-  linkGroup: chat.linkGroup,
-  updatedAt: chat.updatedAt,
-});
 module.exports = {
   // Lấy thông tin nhóm/chat
   async handleGetChatInfo(socket, { conversationId }, userId, callback) {
@@ -34,25 +16,25 @@ module.exports = {
       const chat = await Conversation.findById(conversationId)
         .lean(); // Không cần populate vì userId là String
       console.log("Thông tin chat (sau lean):", chat);
-
+  
       if (!chat) {
         socket.emit("error", { message: "Chat not found" });
         return callback && callback({ success: false, message: "Chat not found" });
       }
-
+  
       console.log("Participants trong cuộc trò chuyện:", chat.participants);
-
+  
       const participant = chat.participants.find((p) => {
         // So sánh trực tiếp userId (đã là String)
         console.log("So sánh:", p.userId, "với", userId);
         return p.userId === userId;
       });
-
+  
       if (!participant) {
         socket.emit("error", { message: "User not found in this conversation" });
         return callback && callback({ success: false, message: "User not found in this conversation" });
       }
-
+  
       socket.emit("chatInfo", chat);
       logger.info(`Chat info sent to user ${userId} for conversation ${conversationId}`);
       if (callback) {
@@ -66,99 +48,99 @@ module.exports = {
       }
     }
   },
-
+  
   // Cập nhật tên nhóm
-  // async handleUpdateChatName(socket, { conversationId, name }, userId, io, callback) {
-  //   try {
-  //     logger.info(`User ${userId} requesting to update chat name for conversation ${conversationId}`);
-
-  //     // Kiểm tra tên mới có hợp lệ không
-  //     if (!name || typeof name !== "string" || name.trim() === "") {
-  //       socket.emit("error", { message: "Chat name must be a non-empty string" });
-  //       return callback && callback({ success: false, message: "Chat name must be a non-empty string" });
-  //     }
-
-  //     // Tìm cuộc trò chuyện
-  //     const chat = await Conversation.findById(conversationId).lean();
-  //     if (!chat) {
-  //       socket.emit("error", { message: "Conversation not found" });
-  //       return callback && callback({ success: false, message: "Conversation not found" });
-  //     }
-
-  //     // Kiểm tra xem user có trong cuộc trò chuyện không
-  //     const participant = chat.participants.find((p) => p.userId === userId);
-  //     if (!participant) {
-  //       socket.emit("error", { message: "User not found in this conversation" });
-  //       return callback && callback({ success: false, message: "User not found in this conversation" });
-  //     }
-
-  //     // Cập nhật tên nhóm
-  //     const updatedChat = await Conversation.findByIdAndUpdate(
-  //       conversationId,
-  //       { $set: { name: name.trim(), updatedAt: new Date() } },
-  //       { new: true }
-  //     ).lean();
-
-  //     if (!updatedChat) {
-  //       socket.emit("error", { message: "Failed to update chat name" });
-  //       return callback && callback({ success: false, message: "Failed to update chat name" });
-  //     }
-
-  //     // Lấy danh sách client trong phòng
-  //     const roomClients = await io.in(conversationId).allSockets();
-  //     logger.info(`Clients in room ${conversationId}:`, Array.from(roomClients));
-
-  //     // Emit sự kiện cập nhật đến tất cả client trong cuộc trò chuyện
-  //     const payload = {
-  //       _id: updatedChat._id,
-  //       name: updatedChat.name,
-  //       participants: updatedChat.participants,
-  //       isGroup: updatedChat.isGroup,
-  //       imageGroup: updatedChat.imageGroup,
-  //       updatedAt: updatedChat.updatedAt,
-  //     };
-  //     logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
-  //     io.to(conversationId).emit("chatInfoUpdated", payload);
-  //     logger.info(`Chat name updated to "${name}" for conversation ${conversationId} by user ${userId}`);
-
-  //     if (callback) {
-  //       callback({ success: true, data: updatedChat });
-  //     }
-  //   } catch (error) {
-  //     errorHandler(socket, "Failed to update chat name", error);
-  //     console.error("Lỗi chi tiết:", error);
-  //     if (callback) {
-  //       callback({ success: false, message: "Failed to update chat name", error: error.message });
-  //     }
-  //   }
-  // },
+  async handleUpdateChatName(socket, { conversationId, name }, userId, io, callback) {
+    try {
+      logger.info(`User ${userId} requesting to update chat name for conversation ${conversationId}`);
+  
+      // Kiểm tra tên mới có hợp lệ không
+      if (!name || typeof name !== "string" || name.trim() === "") {
+        socket.emit("error", { message: "Chat name must be a non-empty string" });
+        return callback && callback({ success: false, message: "Chat name must be a non-empty string" });
+      }
+  
+      // Tìm cuộc trò chuyện
+      const chat = await Conversation.findById(conversationId).lean();
+      if (!chat) {
+        socket.emit("error", { message: "Conversation not found" });
+        return callback && callback({ success: false, message: "Conversation not found" });
+      }
+  
+      // Kiểm tra xem user có trong cuộc trò chuyện không
+      const participant = chat.participants.find((p) => p.userId === userId);
+      if (!participant) {
+        socket.emit("error", { message: "User not found in this conversation" });
+        return callback && callback({ success: false, message: "User not found in this conversation" });
+      }
+  
+      // Cập nhật tên nhóm
+      const updatedChat = await Conversation.findByIdAndUpdate(
+        conversationId,
+        { $set: { name: name.trim(), updatedAt: new Date() } },
+        { new: true }
+      ).lean();
+  
+      if (!updatedChat) {
+        socket.emit("error", { message: "Failed to update chat name" });
+        return callback && callback({ success: false, message: "Failed to update chat name" });
+      }
+  
+      // Lấy danh sách client trong phòng
+      const roomClients = await io.in(conversationId).allSockets();
+      logger.info(`Clients in room ${conversationId}:`, Array.from(roomClients));
+  
+      // Emit sự kiện cập nhật đến tất cả client trong cuộc trò chuyện
+      const payload = {
+        _id: updatedChat._id,
+        name: updatedChat.name,
+        participants: updatedChat.participants,
+        isGroup: updatedChat.isGroup,
+        imageGroup: updatedChat.imageGroup,
+        updatedAt: updatedChat.updatedAt,
+      };
+      logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
+      io.to(conversationId).emit("chatInfoUpdated", payload);
+      logger.info(`Chat name updated to "${name}" for conversation ${conversationId} by user ${userId}`);
+  
+      if (callback) {
+        callback({ success: true, data: updatedChat });
+      }
+    } catch (error) {
+      errorHandler(socket, "Failed to update chat name", error);
+      console.error("Lỗi chi tiết:", error);
+      if (callback) {
+        callback({ success: false, message: "Failed to update chat name", error: error.message });
+      }
+    }
+  },
   // Thêm thành viên vào nhóm
-  async handleAddParticipant(socket, { conversationId, userId, role }, io, callback) {
+  async  handleAddParticipant(socket, { conversationId, userId, role }, io, callback) {
     try {
       if (!conversationId || !userId) {
         socket.emit("error", { message: "Missing conversation ID or user ID" });
         return callback && callback({ success: false, message: "Missing conversation ID or user ID" });
       }
-
+  
       logger.info(`Adding user ${userId} to conversation ${conversationId}`);
       const chat = await Conversation.findById(conversationId);
       if (!chat) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-
+  
       // Kiểm tra xem user đã trong nhóm chưa
       const userExists = chat.participants.some((p) => p.userId.toString() === userId);
       if (userExists) {
         socket.emit("error", { message: "User is already a participant" });
         return callback && callback({ success: false, message: "User is already a participant" });
       }
-
+  
       // Thêm thành viên mới
       chat.participants.push({ userId, role: role || "member" });
       chat.updatedAt = new Date();
       const updatedChat = await chat.save();
-
+  
       // Cập nhật thông tin nhóm cho các thành viên hiện tại
       io.to(conversationId).emit("chatInfoUpdated", {
         conversationId,
@@ -166,7 +148,7 @@ module.exports = {
         name: updatedChat.name,
         isGroup: updatedChat.isGroup,
       });
-
+  
       // Thông báo cho người dùng được thêm về cuộc trò chuyện mới
       logger.info(`Phát sự kiện conversationAdded tới user ${userId} với conversationId ${conversationId}`);
       io.to(userId).emit("conversationAdded", {
@@ -176,7 +158,7 @@ module.exports = {
         participants: updatedChat.participants,
         updatedAt: updatedChat.updatedAt,
       });
-
+  
       logger.info(`User ${userId} added to conversation ${conversationId}`);
       if (callback) {
         callback({ success: true, data: updatedChat });
@@ -424,7 +406,7 @@ module.exports = {
         deletedBy: { $ne: userId },
         isRevoked: false,
       }).sort({ createdAt: -1 }) // Sắp xếp mới nhất trước
-        .lean();
+      .lean();
 
       socket.emit("chatFiles", files.length ? files : []);
       logger.info(`Files sent to user ${userId} for conversation ${conversationId}`);
@@ -464,7 +446,7 @@ module.exports = {
         deletedBy: { $ne: userId },
         isRevoked: false,
       }).sort({ createdAt: -1 }) // Sắp xếp mới nhất trước
-        .lean();
+      .lean();
 
       socket.emit("chatLinks", links.length ? links : []);
       logger.info(`Links sent to user ${userId} for conversation ${conversationId}`);
@@ -531,266 +513,187 @@ module.exports = {
     }
   },
 
+  // Ghim cuộc trò chuyện
+  async handlePinChat(socket, { conversationId, isPinned }, userId, io, callback) {
+    try {
+      if (typeof isPinned !== "boolean") {
+        socket.emit("error", { message: "isPinned must be a boolean" });
+        return callback && callback({ success: false, message: "isPinned must be a boolean" });
+      }
 
-  // // // Tắt/bật thông báo nhóm
-  // // async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
-  // //   try {
-  // //     // Định nghĩa các giá trị hợp lệ cho mute theo conversationSchema
-  // //     const validMuteValues = ["1h", "4h", "8am", "forever", null];
+      logger.info(`User ${userId} pinning conversation ${conversationId} with status ${isPinned}`);
+      const chat = await Conversation.findOneAndUpdate(
+        { _id: conversationId, "participants.userId": userId },
+        { $set: { "participants.$.isPinned": isPinned }, updatedAt: new Date() },
+        { new: true }
+      ).populate("participants.userId");
 
-  // //     // Kiểm tra mute có thuộc tập giá trị hợp lệ không
-  // //     if (!validMuteValues.includes(mute)) {
-  // //       socket.emit("error", {
-  // //         message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-  // //       });
-  // //       return callback && callback({
-  // //         success: false,
-  // //         message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-  // //       });
-  // //     }
+      if (!chat) {
+        socket.emit("error", { message: "Conversation not found" });
+        return callback && callback({ success: false, message: "Conversation not found" });
+      }
 
-  // //     logger.info(`User ${userId} updating notification status to ${mute} for conversation ${conversationId}`);
-  // //     const chat = await Conversation.findOneAndUpdate(
-  // //       { _id: conversationId, "participants.userId": userId },
-  // //       { $set: { "participants.$.mute": mute }, updatedAt: new Date() },
-  // //       { new: true }
-  // //     ).populate("participants.userId");
+      io.to(conversationId).emit("chatInfoUpdated", {
+        conversationId,
+        participants: chat.participants,
+      });
+      logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
+      if (callback) {
+        callback({ success: true, data: chat });
+      }
+    } catch (error) {
+      errorHandler(socket, "Failed to pin chat", error);
+      if (callback) {
+        callback({ success: false, message: "Failed to pin chat" });
+      }
+    }
+  },
 
-  // //     if (!chat) {
-  // //       socket.emit("error", { message: "Conversation not found" });
-  // //       return callback && callback({ success: false, message: "Conversation not found" });
-  // //     }
+  // Tắt/bật thông báo nhóm
+  async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
+    try {
+      // Định nghĩa các giá trị hợp lệ cho mute theo conversationSchema
+      const validMuteValues = ["1h", "4h", "8am", "forever", null];
+  
+      // Kiểm tra mute có thuộc tập giá trị hợp lệ không
+      if (!validMuteValues.includes(mute)) {
+        socket.emit("error", {
+          message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
+        });
+        return callback && callback({
+          success: false,
+          message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
+        });
+      }
+  
+      logger.info(`User ${userId} updating notification status to ${mute} for conversation ${conversationId}`);
+      const chat = await Conversation.findOneAndUpdate(
+        { _id: conversationId, "participants.userId": userId },
+        { $set: { "participants.$.mute": mute }, updatedAt: new Date() },
+        { new: true }
+      ).populate("participants.userId");
+  
+      if (!chat) {
+        socket.emit("error", { message: "Conversation not found" });
+        return callback && callback({ success: false, message: "Conversation not found" });
+      }
+  
+      io.to(conversationId).emit("chatInfoUpdated", {
+        conversationId,
+        participants: chat.participants,
+      });
+      logger.info(`Notification status updated to ${mute} for user ${userId} in conversation ${conversationId}`);
+      if (callback) {
+        callback({ success: true, data: chat });
+      }
+    } catch (error) {
+      errorHandler(socket, "Failed to update notification", error);
+      if (callback) {
+        callback({ success: false, message: "Failed to update notification" });
+      }
+    }
+  },
 
-  // //     io.to(conversationId).emit("chatInfoUpdated", {
-  // //       conversationId,
-  // //       participants: chat.participants,
-  // //     });
-  // //     logger.info(`Notification status updated to ${mute} for user ${userId} in conversation ${conversationId}`);
-  // //     if (callback) {
-  // //       callback({ success: true, data: chat });
-  // //     }
-  // //   } catch (error) {
-  // //     errorHandler(socket, "Failed to update notification", error);
-  // //     if (callback) {
-  // //       callback({ success: false, message: "Failed to update notification" });
-  // //     }
-  // //   }
-  // // },
+  // Ẩn trò chuyện
+  async handleHideChat(socket, { conversationId, isHidden, pin }, userId, io, callback) {
+    try {
+      if (typeof isHidden !== "boolean") {
+        socket.emit("error", { message: "isHidden must be a boolean" });
+        return callback && callback({ success: false, message: "isHidden must be a boolean" });
+      }
 
-  // // // Ẩn trò chuyện
-  // // async handleHideChat(socket, { conversationId, isHidden, pin }, userId, io, callback) {
-  // //   try {
-  // //     if (typeof isHidden !== "boolean") {
-  // //       socket.emit("error", { message: "isHidden must be a boolean" });
-  // //       return callback && callback({ success: false, message: "isHidden must be a boolean" });
-  // //     }
+      logger.info(`User ${userId} hiding conversation ${conversationId} with status ${isHidden}`);
+      const chat = await Conversation.findById(conversationId);
+      if (!chat) {
+        socket.emit("error", { message: "Conversation not found" });
+        return callback && callback({ success: false, message: "Conversation not found" });
+      }
 
-  // //     logger.info(`User ${userId} hiding conversation ${conversationId} with status ${isHidden}`);
-  // //     const chat = await Conversation.findById(conversationId);
-  // //     if (!chat) {
-  // //       socket.emit("error", { message: "Conversation not found" });
-  // //       return callback && callback({ success: false, message: "Conversation not found" });
-  // //     }
+      const participant = chat.participants.find((p) => p.userId.toString() === userId);
+      if (!participant) {
+        socket.emit("error", { message: "User not found in this conversation" });
+        return callback && callback({ success: false, message: "User not found in this conversation" });
+      }
 
-  // //     const participant = chat.participants.find((p) => p.userId.toString() === userId);
-  // //     if (!participant) {
-  // //       socket.emit("error", { message: "User not found in this conversation" });
-  // //       return callback && callback({ success: false, message: "User not found in this conversation" });
-  // //     }
+      participant.isHidden = isHidden;
+      if (isHidden && pin) {
+        const saltRounds = 10;
+        participant.pin = await bcrypt.hash(pin.toString(), saltRounds);
+      } else if (!isHidden) {
+        participant.pin = null;
+      }
 
-  // //     participant.isHidden = isHidden;
-  // //     if (isHidden && pin) {
-  // //       const saltRounds = 10;
-  // //       participant.pin = await bcrypt.hash(pin.toString(), saltRounds);
-  // //     } else if (!isHidden) {
-  // //       participant.pin = null;
-  // //     }
+      chat.updatedAt = new Date();
+      await chat.save();
 
-  // //     chat.updatedAt = new Date();
-  // //     await chat.save();
+      io.to(conversationId).emit("chatInfoUpdated", {
+        conversationId,
+        participants: chat.participants,
+      });
+      logger.info(`Conversation ${conversationId} hidden status updated for user ${userId}`);
+      if (callback) {
+        callback({ success: true, data: chat });
+      }
+    } catch (error) {
+      errorHandler(socket, "Failed to hide/unhide conversation", error);
+      if (callback) {
+        callback({ success: false, message: "Failed to hide/unhide conversation" });
+      }
+    }
+  },
 
-  // //     io.to(conversationId).emit("chatInfoUpdated", {
-  // //       conversationId,
-  // //       participants: chat.participants,
-  // //     });
-  // //     logger.info(`Conversation ${conversationId} hidden status updated for user ${userId}`);
-  // //     if (callback) {
-  // //       callback({ success: true, data: chat });
-  // //     }
-  // //   } catch (error) {
-  // //     errorHandler(socket, "Failed to hide/unhide conversation", error);
-  // //     if (callback) {
-  // //       callback({ success: false, message: "Failed to hide/unhide conversation" });
-  // //     }
-  // //   }
-  // // },
+  // Xóa lịch sử trò chuyện cho người dùng
+  async handleDeleteChatHistoryForMe(socket, { conversationId }, userId, io, callback) {
+    try {
+      logger.info(`User ${userId} deleting chat history for conversation ${conversationId}`);
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
+        socket.emit("error", { message: "Conversation not found" });
+        return callback && callback({ success: false, message: "Conversation not found" });
+      }
 
-  // // Ghim cuộc trò chuyện
-  // // async handlePinChat(socket, { conversationId, isPinned }, userId, io, callback) {
-  // //   try {
-  // //     if (!conversationId) {
-  // //       socket.emit("error", { message: "conversationId is required" });
-  // //       return callback && callback({ success: false, message: "conversationId is required" });
-  // //     }
+      // Kiểm tra xem người dùng có trong cuộc trò chuyện không
+      const participant = conversation.participants.find(
+        (p) => p.userId.toString() === userId
+      );
+      if (!participant) {
+        socket.emit("error", { message: "User not found in this conversation" });
+        return callback && callback({ success: false, message: "User not found in this conversation" });
+      }
 
-  // //     if (typeof isPinned !== "boolean") {
-  // //       socket.emit("error", { message: "isPinned must be a boolean" });
-  // //       return callback && callback({ success: false, message: "isPinned must be a boolean" });
-  // //     }
+      await Message.updateMany(
+        { conversationId },
+        { $addToSet: { deletedBy: userId } }
+      );
 
-  // //     logger.info(`User ${userId} pinning conversation ${conversationId} with status ${isPinned}`);
-  // //     const chat = await Conversation.findOneAndUpdate(
-  // //       { _id: conversationId, "participants.userId": userId },
-  // //       { $set: { "participants.$.isPinned": isPinned }, updatedAt: new Date() },
-  // //       { new: true }
-  // //     ).populate("participants.userId");
+      const lastValidMessage = await Message.findOne({
+        conversationId,
+        isRevoked: false,
+        deletedBy: { $ne: userId },
+      }).sort({ createdAt: -1 });
 
-  // //     if (!chat) {
-  // //       socket.emit("error", { message: "Conversation not found or user not in conversation" });
-  // //       return callback && callback({ success: false, message: "Conversation not found or user not in conversation" });
-  // //     }
+      conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
+      conversation.updatedAt = new Date();
+      await conversation.save();
 
-  // //     const chatInfo = {
-  // //       _id: chat._id,
-  // //       name: chat.name,
-  // //       isGroup: chat.isGroup,
-  // //       imageGroup: chat.imageGroup,
-  // //       participants: chat.participants,
-  // //       linkGroup: chat.linkGroup,
-  // //       updatedAt: chat.updatedAt,
-  // //     };
+      io.to(conversationId).emit("conversationUpdated", {
+        conversationId,
+        lastMessage: lastValidMessage || null,
+        updatedAt: conversation.updatedAt,
+      });
 
-  // //     io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-  // //     logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
-  // //     if (callback) {
-  // //       callback({ success: true, data: chatInfo });
-  // //     }
-  // //   } catch (error) {
-  // //     errorHandler(socket, "Failed to pin chat", error);
-  // //     if (callback) {
-  // //       callback({ success: false, message: "Failed to pin chat" });
-  // //     }
-  // //   }
-  // // },
-
-  // // Ghim cuộc trò chuyện
-  // async handlePinChat(socket, { conversationId, isPinned }, userId, io, callback) {
-  //   try {
-  //     console.log("Backend: handlePinChat bắt đầu", { conversationId, isPinned, userId });
-  //     if (!conversationId) {
-  //       console.warn("Backend: Thiếu conversationId trong handlePinChat");
-  //       socket.emit("error", { message: "conversationId is required" });
-  //       return callback && callback({ from: "handlePinChat", success: false, message: "conversationId is required" });
-  //     }
-
-  //     if (typeof isPinned !== "boolean") {
-  //       console.warn("Backend: isPinned không phải boolean", { isPinned });
-  //       socket.emit("error", { message: "isPinned must be a boolean" });
-  //       return callback && callback({ from: "handlePinChat", success: false, message: "isPinned must be a boolean" });
-  //     }
-
-  //     logger.info(`User ${userId} pinning conversation ${conversationId} with status ${isPinned}`);
-  //     console.log("Backend: Cập nhật trạng thái pin trong DB", { conversationId, userId, isPinned });
-  //     const chat = await Conversation.findOneAndUpdate(
-  //       { _id: conversationId, "participants.userId": userId },
-  //       { $set: { "participants.$.isPinned": isPinned }, updatedAt: new Date() },
-  //       { new: true }
-  //     ).populate("participants.userId");
-
-  //     if (!chat) {
-  //       console.warn("Backend: Không tìm thấy conversation hoặc user không tham gia", { conversationId, userId });
-  //       socket.emit("error", { message: "Conversation not found or user not in conversation" });
-  //       return callback && callback({ from: "handlePinChat", success: false, message: "Conversation not found or user not in conversation" });
-  //     }
-
-  //     const chatInfo = {
-  //       _id: chat._id,
-  //       name: chat.name,
-  //       isGroup: chat.isGroup,
-  //       imageGroup: chat.imageGroup,
-  //       participants: chat.participants,
-  //       linkGroup: chat.linkGroup,
-  //       updatedAt: chat.updatedAt,
-  //     };
-
-  //     console.log("Backend: Phát sự kiện chatInfoUpdated", { chatInfo, room: conversationId });
-  //     io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-  //     logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
-  //     console.log("Backend: Gửi phản hồi thành công từ handlePinChat", { conversationId, isPinned });
-  //     if (callback) {
-  //       callback({ from: "handlePinChat", success: true, data: chatInfo });
-  //     }
-  //   } catch (error) {
-  //     console.error("Backend: Lỗi trong handlePinChat", { error, conversationId, userId });
-  //     errorHandler(socket, "Failed to pin chat", error);
-  //     if (callback) {
-  //       callback({ from: "handlePinChat", success: false, message: "Failed to pin chat" });
-  //     }
-  //   }
-  // },
-
-  // // Tắt/bật thông báo nhóm
-  // async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
-  //   try {
-  //     console.log("Backend: handleUpdateNotification bắt đầu", { conversationId, mute, userId });
-  //     if (!conversationId) {
-  //       console.warn("Backend: Thiếu conversationId trong handleUpdateNotification");
-  //       socket.emit("error", { message: "conversationId is required" });
-  //       return callback && callback({ from: "handleUpdateNotification", success: false, message: "conversationId is required" });
-  //     }
-
-  //     const validMuteValues = ["1h", "4h", "8am", "forever", null];
-  //     if (!validMuteValues.includes(mute)) {
-  //       console.warn("Backend: Giá trị mute không hợp lệ", { mute, validMuteValues });
-  //       socket.emit("error", {
-  //         message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-  //       });
-  //       return callback && callback({
-  //         from: "handleUpdateNotification",
-  //         success: false,
-  //         message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-  //       });
-  //     }
-
-  //     logger.info(`User ${userId} updating notification status to ${mute} for conversation ${conversationId}`);
-  //     console.log("Backend: Cập nhật trạng thái mute trong DB", { conversationId, userId, mute });
-  //     const chat = await Conversation.findOneAndUpdate(
-  //       { _id: conversationId, "participants.userId": userId },
-  //       { $set: { "participants.$.mute": mute }, updatedAt: new Date() },
-  //       { new: true }
-  //     ).populate("participants.userId");
-
-  //     if (!chat) {
-  //       console.warn("Backend: Không tìm thấy conversation hoặc user không tham gia", { conversationId, userId });
-  //       socket.emit("error", { message: "Conversation not found or user not in conversation" });
-  //       return callback && callback({ from: "handleUpdateNotification", success: false, message: "Conversation not found or user not in conversation" });
-  //     }
-
-  //     const chatInfo = {
-  //       _id: chat._id,
-  //       name: chat.name,
-  //       isGroup: chat.isGroup,
-  //       imageGroup: chat.imageGroup,
-  //       participants: chat.participants,
-  //       linkGroup: chat.linkGroup,
-  //       updatedAt: chat.updatedAt,
-  //     };
-
-  //     console.log("Backend: Phát sự kiện chatInfoUpdated", { chatInfo, room: conversationId });
-  //     io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-  //     logger.info(`Notification status updated to ${mute} for user ${userId} in conversation ${conversationId}`);
-  //     console.log("Backend: Gửi phản hồi thành công từ handleUpdateNotification", { conversationId, mute });
-  //     if (callback) {
-  //       callback({ from: "handleUpdateNotification", success: true, data: chatInfo });
-  //     }
-  //   } catch (error) {
-  //     console.error("Backend: Lỗi trong handleUpdateNotification", { error, conversationId, userId });
-  //     errorHandler(socket, "Failed to update notification", error);
-  //     if (callback) {
-  //       callback({ from: "handleUpdateNotification", success: false, message: "Failed to update notification" });
-  //     }
-  //   }
-  // },
+      socket.emit("chatHistoryDeleted", { conversationId });
+      logger.info(`Chat history deleted for user ${userId} in conversation ${conversationId}`);
+      if (callback) {
+        callback({ success: true, data: { conversationId } });
+      }
+    } catch (error) {
+      errorHandler(socket, "Failed to delete chat history", error);
+      if (callback) {
+        callback({ success: false, message: "Failed to delete chat history" });
+      }
+    }
+  },
 
   // Lấy danh sách nhóm chung
   async handleGetCommonGroups(socket, { conversationId }, userId, callback) {
@@ -879,7 +782,7 @@ module.exports = {
   },
 
   // Xóa tin nhắn
-  async deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
+  async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
     try {
       // Log các tham số nhận được để debug
       logger.info(`deleteMessageChatInfo called with:`, {
@@ -890,9 +793,9 @@ module.exports = {
         hasCallback: !!callback,
         callbackType: typeof callback,
       });
-
+  
       logger.info(`User ${userId} attempting to delete URL at index ${urlIndex} of message ${messageId}`);
-
+  
       // Kiểm tra messageId và userId hợp lệ
       if (!mongoose.isValidObjectId(messageId)) {
         logger.error(`Invalid messageId: ${messageId}`);
@@ -918,7 +821,7 @@ module.exports = {
         }
         return;
       }
-
+  
       // Tìm tin nhắn
       const message = await Message.findById(messageId).select("conversationId linkURL messageType isRevoked");
       if (!message) {
@@ -929,7 +832,7 @@ module.exports = {
         }
         return;
       }
-
+  
       // Kiểm tra urlIndex hợp lệ
       if (!message.linkURL || urlIndex >= message.linkURL.length) {
         logger.error(`urlIndex ${urlIndex} is invalid for message ${messageId}`);
@@ -939,7 +842,7 @@ module.exports = {
         }
         return;
       }
-
+  
       // Tìm cuộc trò chuyện
       const conversation = await Conversation.findById(message.conversationId);
       if (!conversation) {
@@ -950,11 +853,11 @@ module.exports = {
         }
         return;
       }
-
+  
       // Ghi log danh sách participants để debug
       logger.info(`Conversation participants: ${JSON.stringify(conversation.participants)}`);
       logger.info(`User ID: ${userId}`);
-
+  
       // Kiểm tra xem userId có trong participants không
       const isParticipant = conversation.participants.some(
         (participant) => participant.userId === userId
@@ -970,13 +873,13 @@ module.exports = {
         }
         return;
       }
-
+  
       // Xóa URL tại urlIndex
       const updateResult = await Message.updateOne(
         { _id: messageId },
         { $unset: { [`linkURL.${urlIndex}`]: 1 } }
       );
-
+  
       if (updateResult.modifiedCount === 0) {
         logger.error(`Failed to remove URL at index ${urlIndex} for message ${messageId}`);
         socket.emit("error", { message: "Failed to remove URL" });
@@ -985,13 +888,13 @@ module.exports = {
         }
         return;
       }
-
+  
       // Xóa các giá trị null/undefined trong linkURL
       await Message.updateOne(
         { _id: messageId },
         { $pull: { linkURL: null } }
       );
-
+  
       // Kiểm tra nếu linkURL rỗng thì xóa tin nhắn
       const updatedMessage = await Message.findById(messageId).select("linkURL conversationId messageType");
       let isMessageDeleted = false;
@@ -1002,18 +905,18 @@ module.exports = {
       } else {
         logger.info(`Removed URL at index ${urlIndex} from message ${messageId}`);
       }
-
+  
       // Cập nhật lastMessage của cuộc trò chuyện
       const lastValidMessage = await Message.findOne({
         conversationId: message.conversationId,
         isRevoked: false,
         linkURL: { $exists: true, $ne: [] },
       }).sort({ createdAt: -1 });
-
+  
       conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
       conversation.updatedAt = new Date();
       await conversation.save();
-
+  
       // Phát sự kiện socket
       if (isMessageDeleted) {
         io.to(message.conversationId.toString()).emit("messageDeleted", {
@@ -1021,13 +924,13 @@ module.exports = {
           conversationId: message.conversationId,
         });
       }
-
+  
       io.to(message.conversationId.toString()).emit("conversationUpdated", {
         conversationId: message.conversationId,
         lastMessage: lastValidMessage || null,
         updatedAt: conversation.updatedAt,
       });
-
+  
       // Cập nhật media, files, links
       if (message.messageType === "image" || message.messageType === "video") {
         const media = await Message.find({
@@ -1054,7 +957,7 @@ module.exports = {
         }).lean();
         io.to(message.conversationId.toString()).emit("chatLinks", links.length ? links : []);
       }
-
+  
       logger.info(
         isMessageDeleted
           ? `Message ${messageId} deleted by user ${userId}`
@@ -1205,13 +1108,13 @@ module.exports = {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-
+  
       // Kiểm tra xem có phải nhóm không
       if (!conversation.isGroup) {
         socket.emit("error", { message: "Only groups can be disbanded" });
         return callback && callback({ success: false, message: "Only groups can be disbanded" });
       }
-
+  
       // Gọi handleConversationRemoved để xử lý xóa
       await handleConversationRemoved(socket, { conversationId }, userId, io, callback);
     } catch (error) {
@@ -1228,41 +1131,41 @@ module.exports = {
         socket.emit("error", { message: "Missing conversation ID" });
         return callback && callback({ success: false, message: "Missing conversation ID" });
       }
-
+  
       logger.info(`User ${userId} attempting to leave conversation ${conversationId}`);
       const chat = await Conversation.findById(conversationId);
       if (!chat) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-
+  
       const currentUser = chat.participants.find((p) => p.userId.toString() === userId);
       if (!currentUser) {
         socket.emit("error", { message: "You are not a participant in this conversation" });
         return callback && callback({ success: false, message: "You are not a participant in this conversation" });
       }
-
+  
       const updatedChat = await Conversation.findByIdAndUpdate(
         conversationId,
         { $pull: { participants: { userId } }, updatedAt: new Date() },
         { new: true }
       ).populate("participants.userId");
-
+  
       if (!updatedChat) {
         socket.emit("error", { message: "Failed to update conversation" });
         return callback && callback({ success: false, message: "Failed to update conversation" });
       }
-
+  
       io.to(conversationId).emit("chatInfoUpdated", {
         conversationId,
         participants: updatedChat.participants,
       });
-
+  
       // Thêm log chi tiết
       logger.info(`Phát sự kiện conversationRemoved tới user ${userId} với conversationId ${conversationId}`);
       io.to(userId).emit("conversationRemoved", { conversationId });
       logger.info(`User ${userId} left conversation ${conversationId}`);
-
+  
       if (callback) {
         callback({ success: true, data: updatedChat });
       }
@@ -1272,196 +1175,5 @@ module.exports = {
         callback({ success: false, message: "Failed to leave group" });
       }
     }
-  },
-
-
-  // Ghim cuộc trò chuyện
-  async handlePinChat(socket, { conversationId, isPinned }, userId, io, callback) {
-    try {
-      console.log("Backend: handlePinChat bắt đầu", { conversationId, isPinned, userId });
-      if (!conversationId) {
-        console.warn("Backend: Thiếu conversationId trong handlePinChat");
-        socket.emit("error", { message: "conversationId is required" });
-        return callback({ from: "handlePinChat", success: false, message: "conversationId is required" });
-      }
-
-      if (typeof isPinned !== "boolean") {
-        console.warn("Backend: isPinned không phải boolean", { isPinned });
-        socket.emit("error", { message: "isPinned must be a boolean" });
-        return callback({ from: "handlePinChat", success: false, message: "isPinned must be a boolean" });
-      }
-
-      logger.info(`User ${userId} pinning conversation ${conversationId} with status ${isPinned}`);
-      console.log("Backend: Cập nhật trạng thái pin trong DB", { conversationId, userId, isPinned });
-      const chat = await Conversation.findOneAndUpdate(
-        { _id: conversationId, "participants.userId": userId },
-        { $set: { "participants.$.isPinned": isPinned }, updatedAt: new Date() },
-        { new: true }
-      ).populate("participants.userId");
-
-      if (!chat) {
-        console.warn("Backend: Không tìm thấy conversation hoặc user không tham gia", { conversationId, userId });
-        socket.emit("error", { message: "Conversation not found or user not in conversation" });
-        return callback({ from: "handlePinChat", success: false, message: "Conversation not found or user not in conversation" });
-      }
-
-      const chatInfo = createChatInfoPayload(chat);
-      console.log("Backend: Phát sự kiện chatInfoUpdated", { chatInfo, room: conversationId });
-      io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-      logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
-      console.log("Backend: Gửi phản hồi thành công từ handlePinChat", { conversationId, isPinned });
-      callback({ from: "handlePinChat", success: true, data: chatInfo });
-    } catch (error) {
-      console.error("Backend: Lỗi trong handlePinChat", { error, conversationId, userId });
-      errorHandler(socket, "Failed to pin chat", error);
-      callback({ from: "handlePinChat", success: false, message: "Failed to pin chat" });
-    }
-  },
-
-  // Tắt/bật thông báo nhóm
-  async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
-    try {
-      console.log("Backend: handleUpdateNotification bắt đầu", { conversationId, mute, userId });
-      if (!conversationId) {
-        console.warn("Backend: Thiếu conversationId trong handleUpdateNotification");
-        socket.emit("error", { message: "conversationId is required" });
-        return callback({ from: "handleUpdateNotification", success: false, message: "conversationId is required" });
-      }
-
-      const validMuteValues = ["1h", "4h", "8am", "forever", null];
-      if (!validMuteValues.includes(mute)) {
-        console.warn("Backend: Giá trị mute không hợp lệ", { mute, validMuteValues });
-        socket.emit("error", {
-          message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-        });
-        return callback({
-          from: "handleUpdateNotification",
-          success: false,
-          message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-        });
-      }
-
-      logger.info(`User ${userId} updating notification status to ${mute} for conversation ${conversationId}`);
-      console.log("Backend: Cập nhật trạng thái mute trong DB", { conversationId, userId, mute });
-      const chat = await Conversation.findOneAndUpdate(
-        { _id: conversationId, "participants.userId": userId },
-        { $set: { "participants.$.mute": mute }, updatedAt: new Date() },
-        { new: true }
-      ).populate("participants.userId");
-
-      if (!chat) {
-        console.warn("Backend: Không tìm thấy conversation hoặc user không tham gia", { conversationId, userId });
-        socket.emit("error", { message: "Conversation not found or user not in conversation" });
-        return callback({ from: "handleUpdateNotification", success: false, message: "Conversation not found or user not in conversation" });
-      }
-
-      const chatInfo = createChatInfoPayload(chat);
-      console.log("Backend: Phát sự kiện chatInfoUpdated", { chatInfo, room: conversationId });
-      io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-      logger.info(`Notification status updated to ${mute} for user ${userId} in conversation ${conversationId}`);
-      console.log("Backend: Gửi phản hồi thành công từ handleUpdateNotification", { conversationId, mute });
-      callback({ from: "handleUpdateNotification", success: true, data: chatInfo });
-    } catch (error) {
-      console.error("Backend: Lỗi trong handleUpdateNotification", { error, conversationId, userId });
-      errorHandler(socket, "Failed to update notification", error);
-      callback({ from: "handleUpdateNotification", success: false, message: "Failed to update notification" });
-    }
-  },
-
-  // Ẩn trò chuyện
-  async handleHideChat(socket, { conversationId, isHidden, pin }, userId, io, callback) {
-    try {
-      console.log("Backend: handleHideChat bắt đầu", { conversationId, isHidden, pin, userId });
-      if (typeof isHidden !== "boolean") {
-        console.warn("Backend: isHidden không phải boolean", { isHidden });
-        socket.emit("error", { message: "isHidden must be a boolean" });
-        return callback({ from: "handleHideChat", success: false, message: "isHidden must be a boolean" });
-      }
-
-      logger.info(`User ${userId} hiding conversation ${conversationId} with status ${isHidden}`);
-      const chat = await Conversation.findById(conversationId);
-      if (!chat) {
-        console.warn("Backend: Không tìm thấy conversation", { conversationId });
-        socket.emit("error", { message: "Conversation not found" });
-        return callback({ from: "handleHideChat", success: false, message: "Conversation not found" });
-      }
-
-      const participant = chat.participants.find((p) => p.userId.toString() === userId);
-      if (!participant) {
-        console.warn("Backend: Người dùng không phải thành viên", { userId });
-        socket.emit("error", { message: "User not found in this conversation" });
-        return callback({ from: "handleHideChat", success: false, message: "User not found in this conversation" });
-      }
-
-      participant.isHidden = isHidden;
-      if (isHidden && pin) {
-        const bcrypt = require("bcrypt");
-        const saltRounds = 10;
-        participant.pin = await bcrypt.hash(pin.toString(), saltRounds);
-        console.log("Backend: Mã hóa pin cho hidden chat", { conversationId, userId });
-      } else if (!isHidden) {
-        participant.pin = null;
-        console.log("Backend: Xóa pin khi bỏ ẩn chat", { conversationId, userId });
-      }
-
-      chat.updatedAt = new Date();
-      await chat.save();
-      console.log("Backend: Cập nhật trạng thái hidden trong DB", { conversationId, userId, isHidden });
-
-      const chatInfo = createChatInfoPayload(chat);
-      console.log("Backend: Phát sự kiện chatInfoUpdated", { chatInfo, room: conversationId });
-      io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-      logger.info(`Conversation ${conversationId} hidden status updated to ${isHidden} for user ${userId}`);
-      console.log("Backend: Gửi phản hồi thành công từ handleHideChat", { conversationId, isHidden });
-      callback({ from: "handleHideChat", success: true, data: chatInfo });
-    } catch (error) {
-      console.error("Backend: Lỗi trong handleHideChat", { error, conversationId, userId });
-      errorHandler(socket, "Failed to hide/unhide conversation", error);
-      callback({ from: "handleHideChat", success: false, message: "Failed to hide/unhide conversation" });
-    }
-  },
-
-  // Cập nhật tên nhóm
-  async handleUpdateChatName(socket, { conversationId, name }, userId, io, callback) {
-    try {
-      console.log("Backend: handleUpdateChatName bắt đầu", { conversationId, name, userId });
-      if (!conversationId) {
-        console.warn("Backend: Thiếu conversationId trong handleUpdateChatName");
-        socket.emit("error", { message: "conversationId is required" });
-        return callback({ from: "handleUpdateChatName", success: false, message: "conversationId is required" });
-      }
-
-      if (!name || typeof name !== "string" || name.trim().length === 0) {
-        console.warn("Backend: Tên không hợp lệ", { name });
-        socket.emit("error", { message: "Name must be a non-empty string" });
-        return callback({ from: "handleUpdateChatName", success: false, message: "Name must be a non-empty string" });
-      }
-
-      logger.info(`User ${userId} updating chat name to ${name} for conversation ${conversationId}`);
-      console.log("Backend: Cập nhật tên nhóm trong DB", { conversationId, userId, name });
-      const chat = await Conversation.findOneAndUpdate(
-        { _id: conversationId, "participants.userId": userId },
-        { $set: { name: name.trim(), updatedAt: new Date() } },
-        { new: true }
-      ).populate("participants.userId");
-
-      if (!chat) {
-        console.warn("Backend: Không tìm thấy conversation hoặc user không tham gia", { conversationId, userId });
-        socket.emit("error", { message: "Conversation not found or user not in conversation" });
-        return callback({ from: "handleUpdateChatName", success: false, message: "Conversation not found or user not in conversation" });
-      }
-
-      const chatInfo = createChatInfoPayload(chat);
-      console.log("Backend: Phát sự kiện chatInfoUpdated", { chatInfo, room: conversationId });
-      io.to(conversationId).emit("chatInfoUpdated", chatInfo);
-      logger.info(`Chat name updated to ${name} for conversation ${conversationId} by user ${userId}`);
-      console.log("Backend: Gửi phản hồi thành công từ handleUpdateChatName", { conversationId, name });
-      callback({ from: "handleUpdateChatName", success: true, data: chatInfo });
-    } catch (error) {
-      console.error("Backend: Lỗi trong handleUpdateChatName", { error, conversationId, userId });
-      errorHandler(socket, "Failed to update chat name", error);
-      callback({ from: "handleUpdateChatName", success: false, message: "Failed to update chat name" });
-    }
   }
-
 };
