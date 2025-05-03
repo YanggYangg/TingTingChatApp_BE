@@ -3,7 +3,7 @@ const Message = require("../../../models/Message");
 const logger = require("../../../utils/logger");
 const errorHandler = require("../../../utils/errorHandler");
 const bcrypt = require("bcrypt");
-const {handleConversationRemoved} = require("./conversation");
+const { handleConversationRemoved } = require("./conversation");
 const mongoose = require("mongoose");
 
 module.exports = {
@@ -16,25 +16,25 @@ module.exports = {
       const chat = await Conversation.findById(conversationId)
         .lean(); // Không cần populate vì userId là String
       console.log("Thông tin chat (sau lean):", chat);
-  
+
       if (!chat) {
         socket.emit("error", { message: "Chat not found" });
         return callback && callback({ success: false, message: "Chat not found" });
       }
-  
+
       console.log("Participants trong cuộc trò chuyện:", chat.participants);
-  
+
       const participant = chat.participants.find((p) => {
         // So sánh trực tiếp userId (đã là String)
         console.log("So sánh:", p.userId, "với", userId);
         return p.userId === userId;
       });
-  
+
       if (!participant) {
         socket.emit("error", { message: "User not found in this conversation" });
         return callback && callback({ success: false, message: "User not found in this conversation" });
       }
-  
+
       socket.emit("chatInfo", chat);
       logger.info(`Chat info sent to user ${userId} for conversation ${conversationId}`);
       if (callback) {
@@ -48,48 +48,48 @@ module.exports = {
       }
     }
   },
-  
+
   // Cập nhật tên nhóm
   async handleUpdateChatName(socket, { conversationId, name }, userId, io, callback) {
     try {
       logger.info(`User ${userId} requesting to update chat name for conversation ${conversationId}`);
-  
+
       // Kiểm tra tên mới có hợp lệ không
       if (!name || typeof name !== "string" || name.trim() === "") {
         socket.emit("error", { message: "Chat name must be a non-empty string" });
         return callback && callback({ success: false, message: "Chat name must be a non-empty string" });
       }
-  
+
       // Tìm cuộc trò chuyện
       const chat = await Conversation.findById(conversationId).lean();
       if (!chat) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-  
+
       // Kiểm tra xem user có trong cuộc trò chuyện không
       const participant = chat.participants.find((p) => p.userId === userId);
       if (!participant) {
         socket.emit("error", { message: "User not found in this conversation" });
         return callback && callback({ success: false, message: "User not found in this conversation" });
       }
-  
+
       // Cập nhật tên nhóm
       const updatedChat = await Conversation.findByIdAndUpdate(
         conversationId,
         { $set: { name: name.trim(), updatedAt: new Date() } },
         { new: true }
       ).lean();
-  
+
       if (!updatedChat) {
         socket.emit("error", { message: "Failed to update chat name" });
         return callback && callback({ success: false, message: "Failed to update chat name" });
       }
-  
+
       // Lấy danh sách client trong phòng
       const roomClients = await io.in(conversationId).allSockets();
       logger.info(`Clients in room ${conversationId}:`, Array.from(roomClients));
-  
+
       // Emit sự kiện cập nhật đến tất cả client trong cuộc trò chuyện
       const payload = {
         _id: updatedChat._id,
@@ -102,7 +102,7 @@ module.exports = {
       logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
       io.to(conversationId).emit("chatInfoUpdated", payload);
       logger.info(`Chat name updated to "${name}" for conversation ${conversationId} by user ${userId}`);
-  
+
       if (callback) {
         callback({ success: true, data: updatedChat });
       }
@@ -114,42 +114,123 @@ module.exports = {
       }
     }
   },
-  // Thêm thành viên vào nhóm
-  async  handleAddParticipant(socket, { conversationId, userId, role }, io, callback) {
+
+  // Cập nhật ảnh nhóm
+  async handleUpdateGroupImage(socket, { conversationId, imageUrl }, userId, io, callback) {
+    try {
+      logger.info(`User ${userId} requesting to update group image for conversation ${conversationId}`);
+
+      // Kiểm tra URL ảnh có hợp lệ không
+      if (!imageUrl || typeof imageUrl !== "string" || imageUrl.trim() === "") {
+        socket.emit("error", { message: "Image URL must be a non-empty string" });
+        return callback && callback({ success: false, message: "Image URL must be a non-empty string" });
+      }
+
+      // Tìm cuộc trò chuyện
+      const chat = await Conversation.findById(conversationId).lean();
+      if (!chat) {
+        socket.emit("error", { message: "Conversation not found" });
+        return callback && callback({ success: false, message: "Conversation not found" });
+      }
+
+      // Kiểm tra xem đây có phải là nhóm không
+      if (!chat.isGroup) {
+        socket.emit("error", { message: "Only group conversations can have an image updated" });
+        return callback && callback({ success: false, message: "Only group conversations can have an image updated" });
+      }
+
+      // Kiểm tra xem user có trong cuộc trò chuyện không
+      const participant = chat.participants.find((p) => p.userId === userId);
+      if (!participant) {
+        socket.emit("error", { message: "User not found in this conversation" });
+        return callback && callback({ success: false, message: "User not found in this conversation" });
+      }
+
+      // Kiểm tra quyền: Chỉ admin mới được cập nhật ảnh nhóm
+      if (participant.role !== "admin") {
+        socket.emit("error", { message: "Only admins can update the group image" });
+        return callback && callback({ success: false, message: "Only admins can update the group image" });
+      }
+
+      // Cập nhật ảnh nhóm
+      const updatedChat = await Conversation.findByIdAndUpdate(
+        conversationId,
+        { $set: { imageGroup: imageUrl.trim(), updatedAt: new Date() } },
+        { new: true }
+      ).lean();
+
+      if (!updatedChat) {
+        socket.emit("error", { message: "Failed to update group image" });
+        return callback && callback({ success: false, message: "Failed to update group image" });
+      }
+
+      // Lấy danh sách client trong phòng
+      const roomClients = await io.in(conversationId).allSockets();
+      logger.info(`Clients in room ${conversationId}:`, Array.from(roomClients));
+
+      // Emit sự kiện cập nhật đến tất cả client trong cuộc trò chuyện
+      const payload = {
+        _id: updatedChat._id,
+        name: updatedChat.name,
+        participants: updatedChat.participants,
+        isGroup: updatedChat.isGroup,
+        imageGroup: updatedChat.imageGroup,
+        updatedAt: updatedChat.updatedAt,
+      };
+      logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
+      io.to(conversationId).emit("chatInfoUpdated", payload);
+      logger.info(`Group image updated to "${imageUrl}" for conversation ${conversationId} by user ${userId}`);
+
+      if (callback) {
+        callback({ success: true, data: updatedChat });
+      }
+    } catch (error) {
+      errorHandler(socket, "Failed to update group image", error);
+      console.error("Lỗi chi tiết:", error);
+      if (callback) {
+        callback({ success: false, message: "Failed to update group image", error: error.message });
+      }
+    }
+  },
+
+  async handleAddParticipant(socket, { conversationId, userId, role }, io, callback) {
     try {
       if (!conversationId || !userId) {
         socket.emit("error", { message: "Missing conversation ID or user ID" });
         return callback && callback({ success: false, message: "Missing conversation ID or user ID" });
       }
-  
+
       logger.info(`Adding user ${userId} to conversation ${conversationId}`);
       const chat = await Conversation.findById(conversationId);
       if (!chat) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-  
-      // Kiểm tra xem user đã trong nhóm chưa
+
       const userExists = chat.participants.some((p) => p.userId.toString() === userId);
       if (userExists) {
         socket.emit("error", { message: "User is already a participant" });
         return callback && callback({ success: false, message: "User is already a participant" });
       }
-  
-      // Thêm thành viên mới
+
       chat.participants.push({ userId, role: role || "member" });
       chat.updatedAt = new Date();
-      const updatedChat = await chat.save();
-  
-      // Cập nhật thông tin nhóm cho các thành viên hiện tại
+      const updatedChat = await chat.save().then((doc) =>
+        doc.populate("participants.userId")
+      );
+
+      // Thêm thành viên mới vào phòng socket
+      io.sockets.sockets.forEach((s) => {
+        if (s.userId === userId) s.join(conversationId);
+      });
+
       io.to(conversationId).emit("chatInfoUpdated", {
         conversationId,
         participants: updatedChat.participants,
         name: updatedChat.name,
         isGroup: updatedChat.isGroup,
       });
-  
-      // Thông báo cho người dùng được thêm về cuộc trò chuyện mới
+
       logger.info(`Phát sự kiện conversationAdded tới user ${userId} với conversationId ${conversationId}`);
       io.to(userId).emit("conversationAdded", {
         conversationId: updatedChat._id,
@@ -158,7 +239,8 @@ module.exports = {
         participants: updatedChat.participants,
         updatedAt: updatedChat.updatedAt,
       });
-  
+
+      socket.emit("addParticipantResponse", { success: true, data: updatedChat });
       logger.info(`User ${userId} added to conversation ${conversationId}`);
       if (callback) {
         callback({ success: true, data: updatedChat });
@@ -171,7 +253,6 @@ module.exports = {
     }
   },
 
-  // Xóa thành viên khỏi nhóm 
   async handleRemoveParticipant(socket, { conversationId, userId: removeUserId }, userId, io, callback) {
     try {
       if (!removeUserId) {
@@ -186,7 +267,6 @@ module.exports = {
         return callback && callback({ success: false, message: "Conversation not found" });
       }
 
-      // Kiểm tra quyền: Chỉ admin mới được xóa thành viên
       const currentUser = chat.participants.find(
         (p) => p.userId.toString() === userId
       );
@@ -195,7 +275,6 @@ module.exports = {
         return callback && callback({ success: false, message: "You are not authorized to remove participants" });
       }
 
-      // Không cho phép admin tự xóa chính mình
       if (userId === removeUserId) {
         socket.emit("error", { message: "Admin cannot remove themselves. Please transfer admin role first." });
         return callback && callback({ success: false, message: "Admin cannot remove themselves. Please transfer admin role first." });
@@ -207,11 +286,20 @@ module.exports = {
         { new: true }
       ).populate("participants.userId");
 
+      // Xóa thành viên khỏi phòng socket
+      io.sockets.sockets.forEach((s) => {
+        if (s.userId === removeUserId) s.leave(conversationId);
+      });
+
       io.to(conversationId).emit("chatInfoUpdated", {
         conversationId,
         participants: updatedChat.participants,
+        name: updatedChat.name,
+        isGroup: updatedChat.isGroup,
       });
-      io.to(removeUserId).emit("conversationRemoved", { conversationId }); // Thông báo cho người bị xóa
+
+      io.to(removeUserId).emit("conversationRemoved", { conversationId });
+      socket.emit("removeParticipantResponse", { success: true, data: updatedChat });
       logger.info(`User ${removeUserId} removed from conversation ${conversationId}`);
       if (callback) {
         callback({ success: true, data: updatedChat });
@@ -225,89 +313,42 @@ module.exports = {
   },
 
   // Thay đổi vai trò của thành viên
-  async handleChangeParticipantRole(socket, { conversationId, userId: targetUserId, role }, userId, io, callback) {
-    try {
-      if (!targetUserId || !role) {
-        socket.emit("error", { message: "Invalid role change data" });
-        return callback && callback({ success: false, message: "Invalid role change data" });
-      }
-
-      logger.info(`User ${userId} changing role of user ${targetUserId} to ${role} in conversation ${conversationId}`);
-      const chat = await Conversation.findById(conversationId);
-      if (!chat) {
-        socket.emit("error", { message: "Conversation not found" });
-        return callback && callback({ success: false, message: "Conversation not found" });
-      }
-
-      // Kiểm tra quyền: Chỉ admin mới được thay đổi vai trò
-      const currentUser = chat.participants.find(
-        (p) => p.userId.toString() === userId
-      );
-      if (!currentUser || currentUser.role !== "admin") {
-        socket.emit("error", { message: "You are not authorized to change participant roles" });
-        return callback && callback({ success: false, message: "You are not authorized to change participant roles" });
-      }
-
-      // Kiểm tra xem target user có trong nhóm không
-      const targetParticipant = chat.participants.find(
-        (p) => p.userId.toString() === targetUserId
-      );
-      if (!targetParticipant) {
-        socket.emit("error", { message: "Target user not found in conversation" });
-        return callback && callback({ success: false, message: "Target user not found in conversation" });
-      }
-
-      const updatedChat = await Conversation.findOneAndUpdate(
-        { _id: conversationId, "participants.userId": targetUserId },
-        { $set: { "participants.$.role": role }, updatedAt: new Date() },
-        { new: true }
-      ).populate("participants.userId");
-
-      io.to(conversationId).emit("chatInfoUpdated", {
-        conversationId,
-        participants: updatedChat.participants,
-      });
-      logger.info(`Role of user ${targetUserId} changed to ${role} in conversation ${conversationId}`);
-      if (callback) {
-        callback({ success: true, data: updatedChat });
-      }
-    } catch (error) {
-      errorHandler(socket, "Failed to change participant role", error);
-      if (callback) {
-        callback({ success: false, message: "Failed to change participant role" });
-      }
-    }
-  },
-
-  // Chuyển quyền trưởng nhóm
-  async handleTransferGroupAdmin(socket, { conversationId, userId: newAdminUserId }, userId, io, callback) {
+  async  handleTransferGroupAdmin(socket, { conversationId, userId: newAdminUserId }, userId, io, callback) {
     try {
       logger.info(`User ${userId} transferring group admin role to user ${newAdminUserId} in conversation ${conversationId}`);
-      const conversation = await Conversation.findById(conversationId);
+      
+      // Tìm conversation và populate participants.userId
+      const conversation = await Conversation.findById(conversationId).populate("participants.userId");
       if (!conversation) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-
+  
+      // Kiểm tra participants
+      if (!conversation.participants || !Array.isArray(conversation.participants)) {
+        socket.emit("error", { message: "Invalid participants data" });
+        return callback && callback({ success: false, message: "Invalid participants data" });
+      }
+  
       // Kiểm tra quyền: Chỉ admin hiện tại mới được chuyển quyền
       const currentAdmin = conversation.participants.find(
-        (p) => p.userId.toString() === userId && p.role === "admin"
+        (p) => p.userId && p.userId.toString() === userId && p.role === "admin"
       );
       if (!currentAdmin) {
         socket.emit("error", { message: "You are not authorized to transfer admin role" });
         return callback && callback({ success: false, message: "You are not authorized to transfer admin role" });
       }
-
+  
       // Kiểm tra xem người dùng mới có trong nhóm không
       const newAdmin = conversation.participants.find(
-        (p) => p.userId.toString() === newAdminUserId
+        (p) => p.userId && p.userId.toString() === newAdminUserId
       );
       if (!newAdmin) {
         socket.emit("error", { message: "New admin user not found in conversation" });
         return callback && callback({ success: false, message: "New admin user not found in conversation" });
       }
-
-      // Chuyển vai trò
+  
+      // Cập nhật vai trò
       await Conversation.updateOne(
         { _id: conversationId, "participants.userId": userId },
         { $set: { "participants.$.role": "member" } }
@@ -320,20 +361,47 @@ module.exports = {
         { _id: conversationId },
         { updatedAt: new Date() }
       );
-
+  
+      // Lấy thông tin conversation đã cập nhật
       const updatedConversation = await Conversation.findById(conversationId).populate("participants.userId");
-      io.to(conversationId).emit("chatInfoUpdated", {
-        conversationId,
-        participants: updatedConversation.participants,
-      });
+      if (!updatedConversation) {
+        socket.emit("error", { message: "Failed to fetch updated conversation" });
+        return callback && callback({ success: false, message: "Failed to fetch updated conversation" });
+      }
+  
+      // Chuẩn bị dữ liệu cho sự kiện chatInfoUpdated
+      const chatInfo = {
+        _id: conversationId,
+        name: updatedConversation.name,
+        isGroup: updatedConversation.isGroup,
+        imageGroup: updatedConversation.imageGroup,
+        participants: updatedConversation.participants.map(p => ({
+          userId: p.userId ? p.userId.toString() : null,
+          role: p.role,
+          isHidden: p.isHidden,
+          mute: p.mute,
+          isPinned: p.isPinned
+        })),
+        linkGroup: updatedConversation.linkGroup,
+        updatedAt: updatedConversation.updatedAt
+      };
+  
+      // Phát sự kiện chatInfoUpdated tới tất cả thành viên trong nhóm
+      io.to(conversationId).emit("chatInfoUpdated", chatInfo);
       logger.info(`Admin role transferred to user ${newAdminUserId} in conversation ${conversationId}`);
+  
+      // Gửi phản hồi callback
       if (callback) {
-        callback({ success: true, data: updatedConversation });
+        callback({ success: true, data: chatInfo });
       }
     } catch (error) {
-      errorHandler(socket, "Failed to transfer group admin role", error);
+      logger.error(`Failed to transfer group admin role: ${error.message}`, error);
+      const errorMessage = error.message.includes("undefined")
+        ? "Invalid user data in participants"
+        : "Failed to transfer group admin role";
+      socket.emit("error", { message: errorMessage, error: error.message });
       if (callback) {
-        callback({ success: false, message: "Failed to transfer group admin role" });
+        callback({ success: false, message: errorMessage });
       }
     }
   },
@@ -406,7 +474,7 @@ module.exports = {
         deletedBy: { $ne: userId },
         isRevoked: false,
       }).sort({ createdAt: -1 }) // Sắp xếp mới nhất trước
-      .lean();
+        .lean();
 
       socket.emit("chatFiles", files.length ? files : []);
       logger.info(`Files sent to user ${userId} for conversation ${conversationId}`);
@@ -446,7 +514,7 @@ module.exports = {
         deletedBy: { $ne: userId },
         isRevoked: false,
       }).sort({ createdAt: -1 }) // Sắp xếp mới nhất trước
-      .lean();
+        .lean();
 
       socket.emit("chatLinks", links.length ? links : []);
       logger.info(`Links sent to user ${userId} for conversation ${conversationId}`);
@@ -526,17 +594,26 @@ module.exports = {
         { _id: conversationId, "participants.userId": userId },
         { $set: { "participants.$.isPinned": isPinned }, updatedAt: new Date() },
         { new: true }
-      ).populate("participants.userId");
+      ).lean();
 
       if (!chat) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
 
-      io.to(conversationId).emit("chatInfoUpdated", {
-        conversationId,
+      const roomClients = await io.in(conversationId).allSockets();
+      logger.info(`Clients in room ${conversationId}:`, Array.from(roomClients));
+
+      const payload = {
+        _id: chat._id,
+        name: chat.name,
+        isGroup: chat.isGroup,
+        imageGroup: chat.imageGroup,
         participants: chat.participants,
-      });
+        updatedAt: chat.updatedAt,
+      };
+      logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
+      io.to(conversationId).emit("chatInfoUpdated", payload);
       logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
       if (callback) {
         callback({ success: true, data: chat });
@@ -549,103 +626,155 @@ module.exports = {
     }
   },
 
-  // Tắt/bật thông báo nhóm
   async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
     try {
-      // Định nghĩa các giá trị hợp lệ cho mute theo conversationSchema
-      const validMuteValues = ["1h", "4h", "8am", "forever", null];
-  
-      // Kiểm tra mute có thuộc tập giá trị hợp lệ không
-      if (!validMuteValues.includes(mute)) {
-        socket.emit("error", {
-          message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-        });
-        return callback && callback({
-          success: false,
-          message: "mute must be one of: '1h', '4h', '8am', 'forever', or null",
-        });
+      if (!mongoose.isValidObjectId(conversationId)) {
+        socket.emit("error", { message: "Invalid conversation ID" });
+        return callback && callback({ success: false, message: "Invalid conversation ID" });
       }
   
-      logger.info(`User ${userId} updating notification status to ${mute} for conversation ${conversationId}`);
-      const chat = await Conversation.findOneAndUpdate(
-        { _id: conversationId, "participants.userId": userId },
-        { $set: { "participants.$.mute": mute }, updatedAt: new Date() },
-        { new: true }
-      ).populate("participants.userId");
-  
-      if (!chat) {
+      logger.info(`User ${userId} updating notification settings for conversation ${conversationId}`);
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
   
-      io.to(conversationId).emit("chatInfoUpdated", {
-        conversationId,
-        participants: chat.participants,
-      });
-      logger.info(`Notification status updated to ${mute} for user ${userId} in conversation ${conversationId}`);
-      if (callback) {
-        callback({ success: true, data: chat });
-      }
-    } catch (error) {
-      errorHandler(socket, "Failed to update notification", error);
-      if (callback) {
-        callback({ success: false, message: "Failed to update notification" });
-      }
-    }
-  },
-
-  // Ẩn trò chuyện
-  async handleHideChat(socket, { conversationId, isHidden, pin }, userId, io, callback) {
-    try {
-      if (typeof isHidden !== "boolean") {
-        socket.emit("error", { message: "isHidden must be a boolean" });
-        return callback && callback({ success: false, message: "isHidden must be a boolean" });
-      }
-
-      logger.info(`User ${userId} hiding conversation ${conversationId} with status ${isHidden}`);
-      const chat = await Conversation.findById(conversationId);
-      if (!chat) {
-        socket.emit("error", { message: "Conversation not found" });
-        return callback && callback({ success: false, message: "Conversation not found" });
-      }
-
-      const participant = chat.participants.find((p) => p.userId.toString() === userId);
+      const participant = conversation.participants.find((p) => p.userId.toString() === userId);
       if (!participant) {
         socket.emit("error", { message: "User not found in this conversation" });
         return callback && callback({ success: false, message: "User not found in this conversation" });
       }
-
-      participant.isHidden = isHidden;
-      if (isHidden && pin) {
-        const saltRounds = 10;
-        participant.pin = await bcrypt.hash(pin.toString(), saltRounds);
-      } else if (!isHidden) {
-        participant.pin = null;
-      }
-
-      chat.updatedAt = new Date();
-      await chat.save();
-
-      io.to(conversationId).emit("chatInfoUpdated", {
-        conversationId,
-        participants: chat.participants,
-      });
-      logger.info(`Conversation ${conversationId} hidden status updated for user ${userId}`);
+  
+      participant.mute = mute || null;
+      conversation.updatedAt = new Date();
+      const updatedConversation = await conversation.save();
+  
+      const payload = {
+        _id: updatedConversation._id,
+        name: updatedConversation.name,
+        isGroup: updatedConversation.isGroup,
+        imageGroup: updatedConversation.imageGroup,
+        participants: updatedConversation.participants,
+        updatedAt: updatedConversation.updatedAt,
+      };
+      io.to(conversationId).emit("chatInfoUpdated", payload);
+      logger.info(`Notification settings updated for user ${userId} in conversation ${conversationId}`);
       if (callback) {
-        callback({ success: true, data: chat });
+        callback({ success: true, data: updatedConversation });
       }
     } catch (error) {
-      errorHandler(socket, "Failed to hide/unhide conversation", error);
+      errorHandler(socket, "Failed to update notification settings", error);
       if (callback) {
-        callback({ success: false, message: "Failed to hide/unhide conversation" });
+        callback({ success: false, message: "Failed to update notification settings" });
       }
     }
   },
-
-  // Xóa lịch sử trò chuyện cho người dùng
-  async handleDeleteChatHistoryForMe(socket, { conversationId }, userId, io, callback) {
+  // Ẩn trò chuyện
+  async handleHideChat(socket, { conversationId, isHidden, pin }, userId, io, callback) {
     try {
-      logger.info(`User ${userId} deleting chat history for conversation ${conversationId}`);
+      if (!conversationId || typeof isHidden !== "boolean") {
+        socket.emit("error", { message: "Thiếu hoặc dữ liệu không hợp lệ" });
+        return callback && callback({ success: false, message: "Thiếu hoặc dữ liệu không hợp lệ" });
+      }
+
+      const chat = await Conversation.findById(conversationId);
+      if (!chat) {
+        socket.emit("error", { message: "Không tìm thấy cuộc trò chuyện" });
+        return callback && callback({ success: false, message: "Không tìm thấy cuộc trò chuyện" });
+      }
+
+      const participant = chat.participants.find((p) => p.userId.toString() === userId);
+      if (!participant) {
+        socket.emit("error", { message: "Bạn không phải là thành viên của cuộc trò chuyện" });
+        return callback && callback({ success: false, message: "Bạn không phải là thành viên của cuộc trò chuyện" });
+      }
+
+      if (isHidden && pin && (!/^\d{4}$/.test(pin))) {
+        socket.emit("error", { message: "Mã PIN phải là 4 chữ số" });
+        return callback && callback({ success: false, message: "Mã PIN phải là 4 chữ số" });
+      }
+
+      participant.isHidden = isHidden;
+      participant.pin = isHidden ? pin : null;
+      chat.updatedAt = new Date();
+
+      await chat.save();
+
+      io.to(conversationId).emit("chatInfoUpdated", {
+        _id: chat._id,
+        name: chat.name,
+        isGroup: chat.isGroup,
+        imageGroup: chat.imageGroup,
+        participants: chat.participants,
+        linkGroup: chat.linkGroup,
+        updatedAt: chat.updatedAt,
+      });
+
+      logger.info(`User ${userId} ${isHidden ? "hid" : "unhid"} conversation ${conversationId}`);
+      callback && callback({ success: true, data: chat });
+    } catch (error) {
+      errorHandler(socket, "Lỗi khi ẩn/hiện trò chuyện", error);
+      callback && callback({ success: false, message: "Lỗi khi ẩn/hiện trò chuyện" });
+    }
+  },
+
+  // // Xóa lịch sử trò chuyện cho người dùng
+  // async handleDeleteChatHistoryForMe(socket, { conversationId }, userId, io, callback) {
+  //   try {
+  //     logger.info(`User ${userId} deleting chat history for conversation ${conversationId}`);
+  //     const conversation = await Conversation.findById(conversationId);
+  //     if (!conversation) {
+  //       socket.emit("error", { message: "Conversation not found" });
+  //       return callback && callback({ success: false, message: "Conversation not found" });
+  //     }
+
+  //     // Kiểm tra xem người dùng có trong cuộc trò chuyện không
+  //     const participant = conversation.participants.find(
+  //       (p) => p.userId.toString() === userId
+  //     );
+  //     if (!participant) {
+  //       socket.emit("error", { message: "User not found in this conversation" });
+  //       return callback && callback({ success: false, message: "User not found in this conversation" });
+  //     }
+
+  //     await Message.updateMany(
+  //       { conversationId },
+  //       { $addToSet: { deletedBy: userId } }
+  //     );
+
+  //     const lastValidMessage = await Message.findOne({
+  //       conversationId,
+  //       isRevoked: false,
+  //       deletedBy: { $ne: userId },
+  //     }).sort({ createdAt: -1 });
+
+  //     conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
+  //     conversation.updatedAt = new Date();
+  //     await conversation.save();
+
+  //     io.to(conversationId).emit("conversationUpdated", {
+  //       conversationId,
+  //       lastMessage: lastValidMessage || null,
+  //       updatedAt: conversation.updatedAt,
+  //     });
+
+  //     socket.emit("chatHistoryDeleted", { conversationId });
+  //     logger.info(`Chat history deleted for user ${userId} in conversation ${conversationId}`);
+  //     if (callback) {
+  //       callback({ success: true, data: { conversationId } });
+  //     }
+  //   } catch (error) {
+  //     errorHandler(socket, "Failed to delete chat history", error);
+  //     if (callback) {
+  //       callback({ success: false, message: "Failed to delete chat history" });
+  //     }
+  //   }
+  // },
+
+  async handleDeleteAllChatHistory(socket, { conversationId }, userId, io, callback) {
+    try {
+      logger.info(`User ${userId} deleting all chat history for conversation ${conversationId}`);
       const conversation = await Conversation.findById(conversationId);
       if (!conversation) {
         socket.emit("error", { message: "Conversation not found" });
@@ -661,36 +790,43 @@ module.exports = {
         return callback && callback({ success: false, message: "User not found in this conversation" });
       }
 
+      // Đánh dấu tất cả tin nhắn bị xóa bởi userId
       await Message.updateMany(
         { conversationId },
         { $addToSet: { deletedBy: userId } }
       );
 
+      // Tìm tin nhắn hợp lệ cuối cùng (nếu có)
       const lastValidMessage = await Message.findOne({
         conversationId,
         isRevoked: false,
         deletedBy: { $ne: userId },
       }).sort({ createdAt: -1 });
 
+      // Cập nhật conversation
       conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
       conversation.updatedAt = new Date();
       await conversation.save();
 
+      // Phát sự kiện conversationUpdated
       io.to(conversationId).emit("conversationUpdated", {
         conversationId,
         lastMessage: lastValidMessage || null,
         updatedAt: conversation.updatedAt,
       });
 
-      socket.emit("chatHistoryDeleted", { conversationId });
-      logger.info(`Chat history deleted for user ${userId} in conversation ${conversationId}`);
+      // Phát sự kiện deleteAllChatHistory tới tất cả client
+      io.to(conversationId).emit("deleteAllChatHistory", { conversationId });
+      socket.emit("deleteAllChatHistory", { conversationId }); // Gửi cho người gửi
+
+      logger.info(`All chat history deleted for user ${userId} in conversation ${conversationId}`);
       if (callback) {
         callback({ success: true, data: { conversationId } });
       }
     } catch (error) {
-      errorHandler(socket, "Failed to delete chat history", error);
+      errorHandler(socket, "Failed to delete all chat history", error);
       if (callback) {
-        callback({ success: false, message: "Failed to delete chat history" });
+        callback({ success: false, message: "Failed to delete all chat history" });
       }
     }
   },
@@ -782,7 +918,7 @@ module.exports = {
   },
 
   // Xóa tin nhắn
-  async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
+  async deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
     try {
       // Log các tham số nhận được để debug
       logger.info(`deleteMessageChatInfo called with:`, {
@@ -793,9 +929,9 @@ module.exports = {
         hasCallback: !!callback,
         callbackType: typeof callback,
       });
-  
+
       logger.info(`User ${userId} attempting to delete URL at index ${urlIndex} of message ${messageId}`);
-  
+
       // Kiểm tra messageId và userId hợp lệ
       if (!mongoose.isValidObjectId(messageId)) {
         logger.error(`Invalid messageId: ${messageId}`);
@@ -821,7 +957,7 @@ module.exports = {
         }
         return;
       }
-  
+
       // Tìm tin nhắn
       const message = await Message.findById(messageId).select("conversationId linkURL messageType isRevoked");
       if (!message) {
@@ -832,7 +968,7 @@ module.exports = {
         }
         return;
       }
-  
+
       // Kiểm tra urlIndex hợp lệ
       if (!message.linkURL || urlIndex >= message.linkURL.length) {
         logger.error(`urlIndex ${urlIndex} is invalid for message ${messageId}`);
@@ -842,7 +978,7 @@ module.exports = {
         }
         return;
       }
-  
+
       // Tìm cuộc trò chuyện
       const conversation = await Conversation.findById(message.conversationId);
       if (!conversation) {
@@ -853,11 +989,11 @@ module.exports = {
         }
         return;
       }
-  
+
       // Ghi log danh sách participants để debug
       logger.info(`Conversation participants: ${JSON.stringify(conversation.participants)}`);
       logger.info(`User ID: ${userId}`);
-  
+
       // Kiểm tra xem userId có trong participants không
       const isParticipant = conversation.participants.some(
         (participant) => participant.userId === userId
@@ -873,13 +1009,13 @@ module.exports = {
         }
         return;
       }
-  
+
       // Xóa URL tại urlIndex
       const updateResult = await Message.updateOne(
         { _id: messageId },
         { $unset: { [`linkURL.${urlIndex}`]: 1 } }
       );
-  
+
       if (updateResult.modifiedCount === 0) {
         logger.error(`Failed to remove URL at index ${urlIndex} for message ${messageId}`);
         socket.emit("error", { message: "Failed to remove URL" });
@@ -888,13 +1024,13 @@ module.exports = {
         }
         return;
       }
-  
+
       // Xóa các giá trị null/undefined trong linkURL
       await Message.updateOne(
         { _id: messageId },
         { $pull: { linkURL: null } }
       );
-  
+
       // Kiểm tra nếu linkURL rỗng thì xóa tin nhắn
       const updatedMessage = await Message.findById(messageId).select("linkURL conversationId messageType");
       let isMessageDeleted = false;
@@ -905,18 +1041,18 @@ module.exports = {
       } else {
         logger.info(`Removed URL at index ${urlIndex} from message ${messageId}`);
       }
-  
+
       // Cập nhật lastMessage của cuộc trò chuyện
       const lastValidMessage = await Message.findOne({
         conversationId: message.conversationId,
         isRevoked: false,
         linkURL: { $exists: true, $ne: [] },
       }).sort({ createdAt: -1 });
-  
+
       conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
       conversation.updatedAt = new Date();
       await conversation.save();
-  
+
       // Phát sự kiện socket
       if (isMessageDeleted) {
         io.to(message.conversationId.toString()).emit("messageDeleted", {
@@ -924,13 +1060,13 @@ module.exports = {
           conversationId: message.conversationId,
         });
       }
-  
+
       io.to(message.conversationId.toString()).emit("conversationUpdated", {
         conversationId: message.conversationId,
         lastMessage: lastValidMessage || null,
         updatedAt: conversation.updatedAt,
       });
-  
+
       // Cập nhật media, files, links
       if (message.messageType === "image" || message.messageType === "video") {
         const media = await Message.find({
@@ -957,7 +1093,7 @@ module.exports = {
         }).lean();
         io.to(message.conversationId.toString()).emit("chatLinks", links.length ? links : []);
       }
-  
+
       logger.info(
         isMessageDeleted
           ? `Message ${messageId} deleted by user ${userId}`
@@ -1108,13 +1244,13 @@ module.exports = {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-  
+
       // Kiểm tra xem có phải nhóm không
       if (!conversation.isGroup) {
         socket.emit("error", { message: "Only groups can be disbanded" });
         return callback && callback({ success: false, message: "Only groups can be disbanded" });
       }
-  
+
       // Gọi handleConversationRemoved để xử lý xóa
       await handleConversationRemoved(socket, { conversationId }, userId, io, callback);
     } catch (error) {
@@ -1125,47 +1261,81 @@ module.exports = {
     }
   },
   // rời nhóm
-  async handleLeaveGroup(socket, { conversationId }, userId, io, callback) {
+  async handleLeaveGroup(socket, { conversationId, userId }, io, callback) {
     try {
-      if (!conversationId) {
-        socket.emit("error", { message: "Missing conversation ID" });
-        return callback && callback({ success: false, message: "Missing conversation ID" });
+      if (!conversationId || !userId) {
+        socket.emit("error", { message: "Missing conversation ID or user ID" });
+        return callback && callback({ success: false, message: "Missing conversation ID or user ID" });
       }
-  
+
       logger.info(`User ${userId} attempting to leave conversation ${conversationId}`);
       const chat = await Conversation.findById(conversationId);
       if (!chat) {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-  
+
+      if (!chat.isGroup) {
+        socket.emit("error", { message: "This is not a group conversation" });
+        return callback && callback({ success: false, message: "This is not a group conversation" });
+      }
+
       const currentUser = chat.participants.find((p) => p.userId.toString() === userId);
       if (!currentUser) {
         socket.emit("error", { message: "You are not a participant in this conversation" });
         return callback && callback({ success: false, message: "You are not a participant in this conversation" });
       }
-  
+
+      // Kiểm tra nếu người dùng là admin
+      if (currentUser.role === "admin") {
+        const otherParticipants = chat.participants.filter((p) => p.userId.toString() !== userId);
+        if (otherParticipants.length === 0) {
+          // Nếu chỉ còn admin, giải tán nhóm
+          await Conversation.findByIdAndDelete(conversationId);
+          io.to(conversationId).emit("groupDisbanded", { conversationId });
+          logger.info(`Conversation ${conversationId} disbanded as last admin ${userId} left`);
+          return callback && callback({ success: true, message: "Group disbanded as last member" });
+        }
+
+        // Yêu cầu chuyển quyền admin
+        socket.emit("error", { message: "Admin must transfer admin role before leaving" });
+        return callback && callback({ success: false, message: "Admin must transfer admin role before leaving" });
+      }
+
+      // Xóa người dùng khỏi nhóm
       const updatedChat = await Conversation.findByIdAndUpdate(
         conversationId,
         { $pull: { participants: { userId } }, updatedAt: new Date() },
         { new: true }
       ).populate("participants.userId");
-  
+
       if (!updatedChat) {
         socket.emit("error", { message: "Failed to update conversation" });
         return callback && callback({ success: false, message: "Failed to update conversation" });
       }
-  
+
+      // Phát sự kiện chatInfoUpdated tới các thành viên còn lại
       io.to(conversationId).emit("chatInfoUpdated", {
-        conversationId,
+        _id: updatedChat._id,
+        name: updatedChat.name,
+        isGroup: updatedChat.isGroup,
+        imageGroup: updatedChat.imageGroup,
         participants: updatedChat.participants,
+        linkGroup: updatedChat.linkGroup,
+        updatedAt: updatedChat.updatedAt,
       });
-  
-      // Thêm log chi tiết
-      logger.info(`Phát sự kiện conversationRemoved tới user ${userId} với conversationId ${conversationId}`);
+
+      // Phát sự kiện groupLeft tới các thành viên còn lại
+      io.to(conversationId).emit("groupLeft", {
+        conversationId,
+        userId,
+      });
+
+      // Phát sự kiện conversationRemoved tới người rời
       io.to(userId).emit("conversationRemoved", { conversationId });
+
       logger.info(`User ${userId} left conversation ${conversationId}`);
-  
+
       if (callback) {
         callback({ success: true, data: updatedChat });
       }

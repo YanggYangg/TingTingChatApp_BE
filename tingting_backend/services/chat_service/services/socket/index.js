@@ -24,6 +24,7 @@ const {
 const {
   handleGetChatInfo,
   handleUpdateChatName,
+  handleUpdateGroupImage, // Added new handler
   handleAddParticipant,
   handleRemoveParticipant,
   handleChangeParticipantRole,
@@ -35,7 +36,7 @@ const {
   handlePinChat,
   handleUpdateNotification,
   handleHideChat,
-  handleDeleteChatHistoryForMe,
+  handleDeleteAllChatHistory,
   handleGetCommonGroups,
   handleFindMessages,
   deleteMessageChatInfo,
@@ -197,6 +198,15 @@ module.exports = {
         handleUpdateChatName(socket, data, socket.handshake.query.userId, io, callback);
       });
 
+      // New event listener for updating group image
+      socket.on("updateGroupImage", (data, callback) => {
+        if (!data.conversationId || !data.imageUrl) {
+          socket.emit("error", { message: "Invalid data provided on updateGroupImage" });
+          return logger.error("Invalid data provided on updateGroupImage");
+        }
+        handleUpdateGroupImage(socket, data, socket.handshake.query.userId, io, callback);
+      });
+
       // Đăng ký sự kiện trong socket
       socket.on("addParticipant", async (data, callback) => {
         if (!data.conversationId || !data.userId) {
@@ -225,7 +235,9 @@ module.exports = {
       socket.on("transferGroupAdmin", (data, callback) => {
         if (!data.conversationId || !data.userId) {
           socket.emit("error", { message: "Invalid data provided on transferGroupAdmin" });
-          return logger.error("Invalid data provided on transferGroupAdmin");
+          return
+
+ logger.error("Invalid data provided on transferGroupAdmin");
         }
         handleTransferGroupAdmin(socket, data, socket.handshake.query.userId, io, callback);
       });
@@ -330,12 +342,12 @@ module.exports = {
       });
 
       // leave group conversation
-      socket.on("leaveGroupSuccess", (data, callback) => {
+      socket.on("leaveGroup", (data, callback) => {
         if (!data.conversationId) {
           socket.emit("error", { message: "Invalid conversation ID provided on leaveGroup" });
           return logger.error("Invalid conversation ID provided on leaveGroup");
         }
-        handleLeaveGroup(socket, data, socket.handshake.query.userId, io, callback);
+        handleLeaveGroup(socket, data, io, callback);
       });
       // Handle disconnect
       socket.on("disconnect", () => {
@@ -349,6 +361,10 @@ module.exports = {
 
         delete userConversations[userId];
       });
+
+      socket.on("deleteAllChatHistory", (data, callback) =>
+        handleDeleteAllChatHistory(socket, data, socket.handshake.query.userId, io, callback)
+      );
       socket.on("disbandGroup", (data, callback) => {
         if (!data.conversationId) {
           socket.emit("error", { message: "Invalid conversation ID provided on disbandGroup" });
