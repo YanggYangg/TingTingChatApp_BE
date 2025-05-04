@@ -27,7 +27,7 @@ const {
   handleUpdateGroupImage, // Added new handler
   handleAddParticipant,
   handleRemoveParticipant,
-  handleChangeParticipantRole,
+  // handleChangeParticipantRole,
   handleTransferGroupAdmin,
   handleGetChatMedia,
   handleGetChatFiles,
@@ -298,13 +298,13 @@ module.exports = {
         handleHideChat(socket, data, socket.handshake.query.userId, io, callback);
       });
 
-      socket.on("deleteChatHistoryForMe", (data, callback) => {
-        if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on deleteChatHistoryForMe" });
-          return logger.error("Invalid conversation ID provided on deleteChatHistoryForMe");
-        }
-        handleDeleteChatHistoryForMe(socket, data, socket.handshake.query.userId, io, callback);
-      });
+      // socket.on("deleteChatHistoryForMe", (data, callback) => {
+      //   if (!data.conversationId) {
+      //     socket.emit("error", { message: "Invalid conversation ID provided on deleteChatHistoryForMe" });
+      //     return logger.error("Invalid conversation ID provided on deleteChatHistoryForMe");
+      //   }
+      //   handleDeleteChatHistoryForMe(socket, data, socket.handshake.query.userId, io, callback);
+      // });
 
       socket.on("getCommonGroups", (data, callback) => {
         if (!data.conversationId) {

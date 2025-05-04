@@ -780,7 +780,7 @@ module.exports = {
         socket.emit("error", { message: "Conversation not found" });
         return callback && callback({ success: false, message: "Conversation not found" });
       }
-
+  
       // Kiểm tra xem người dùng có trong cuộc trò chuyện không
       const participant = conversation.participants.find(
         (p) => p.userId.toString() === userId
@@ -789,36 +789,40 @@ module.exports = {
         socket.emit("error", { message: "User not found in this conversation" });
         return callback && callback({ success: false, message: "User not found in this conversation" });
       }
-
+  
       // Đánh dấu tất cả tin nhắn bị xóa bởi userId
       await Message.updateMany(
         { conversationId },
         { $addToSet: { deletedBy: userId } }
       );
-
+  
       // Tìm tin nhắn hợp lệ cuối cùng (nếu có)
       const lastValidMessage = await Message.findOne({
         conversationId,
         isRevoked: false,
         deletedBy: { $ne: userId },
       }).sort({ createdAt: -1 });
-
+  
       // Cập nhật conversation
       conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
       conversation.updatedAt = new Date();
       await conversation.save();
-
+  
+      // **Sửa lỗi**: Kiểm tra danh sách client trong phòng
+      const socketsInRoom = await io.in(conversationId).allSockets();
+      logger.info(`Clients in room ${conversationId}: ${[...socketsInRoom].join(", ")}`);
+  
       // Phát sự kiện conversationUpdated
       io.to(conversationId).emit("conversationUpdated", {
         conversationId,
         lastMessage: lastValidMessage || null,
         updatedAt: conversation.updatedAt,
       });
-
-      // Phát sự kiện deleteAllChatHistory tới tất cả client
-      io.to(conversationId).emit("deleteAllChatHistory", { conversationId });
-      socket.emit("deleteAllChatHistory", { conversationId }); // Gửi cho người gửi
-
+  
+      // **Sửa lỗi**: Gửi userId của người xóa trong sự kiện deleteAllChatHistory
+      io.to(conversationId).emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
+      socket.emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
+  
       logger.info(`All chat history deleted for user ${userId} in conversation ${conversationId}`);
       if (callback) {
         callback({ success: true, data: { conversationId } });
@@ -830,7 +834,6 @@ module.exports = {
       }
     }
   },
-
   // Lấy danh sách nhóm chung
   async handleGetCommonGroups(socket, { conversationId }, userId, callback) {
     try {
