@@ -47,6 +47,7 @@ export const sendFriendRequest = async (req, res) => {
 
 export const respondToFriendRequest = async (req, res) => {
   try {
+    console.log("Dữ liệu nhận được từ frontend:", req.body);
     const { requestId, action, userId } = req.body;
     //userId : la ID cua nguoi dang dang nhap (recipient)
     if (!["accepted", "rejected"].includes(action)) {
@@ -85,12 +86,14 @@ export const respondToFriendRequest = async (req, res) => {
     //Neu chap nhan => goi sang chat_service de tao conversation
     if(action === "accepted"){
       try {
-        await axios.post('http://localhost:5000/conversations/createConversation', {
-          isGroup: false,
-          participants:[
-            {userId: request.requester.toString()},
-            {userId: request.recipient.toString()},
-          ]
+        await axios.post('http://localhost:5000/conversations/getOrCreateConversation', {
+          //isGroup: false,
+          // participants:[
+          //   {userId: request.requester.toString()},
+          //   {userId: request.recipient.toString()},
+          // ]
+          user1Id: request.requester.toString(),
+          user2Id: request.recipient.toString()
       });
       console.log("Tạo conversation thành công!");
       }catch (err) {
@@ -268,7 +271,14 @@ export const checkFriendStatus = async (req, res) => {
       return res.status(200).json({ status: "not_friends" });
     }
 
-    return res.status(200).json({ status: existingRequest.status });
+    return res.status(200).json({ 
+      id: existingRequest._id,
+      status: existingRequest.status,
+      requester: existingRequest.requester.toString(),
+      recipient: existingRequest.recipient.toString(),
+      isRequester: existingRequest.requester.toString() === userIdA,
+      message: "Friendship status retrieved successfully.",
+    });
   }catch (error) {
     console.error("Error checking friend status:", error);
     res.status(500).json({ message: "Server error" });
@@ -321,6 +331,5 @@ export const getSentPendingRequests = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 }
-
 
 

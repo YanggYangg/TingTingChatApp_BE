@@ -24,9 +24,9 @@ app.use('/api/v1/friendRequest', friendRequestRouter);
 
 app.use(errorMiddleware);
 
-app.listen (PORT, async () => {
-    console.log(`Server is running on port http://localhost:${PORT}`);
-    console.log(new Date());
-    await connectToDatabase();
-});
+// app.listen (PORT, async () => {
+//     console.log(`Server is running on port http://localhost:${PORT}`);
+//     console.log(new Date());
+//     await connectToDatabase();
+// });
 export default app;
