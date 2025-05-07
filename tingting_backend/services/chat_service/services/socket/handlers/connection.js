@@ -11,6 +11,11 @@ module.exports = {
       userSocketMap[userId] = socket.id;
       logger.info(`User ${userId} connected with socket ${socket.id}`);
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
+      socket.on("getOnlineUsers", () => {
+        logger.info(`📥 User ${userId} requested online users`);
+        socket.emit("getOnlineUsers", Object.keys(userSocketMap));
+      });
+
     }
 
     socket.on("disconnect", () => {
