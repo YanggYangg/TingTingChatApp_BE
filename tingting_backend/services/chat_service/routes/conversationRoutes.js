@@ -6,7 +6,8 @@ const { getAllConversations,
   deleteConversationHistory,
   disbandGroup,
   getAllGroups,
-  getUserJoinGroup
+  getUserJoinGroup,
+  getOrCreateConversation
 } = require('../controllers/conversationController');
 const chatInfoController = require('../controllers/chatInfoController');
 const router = express.Router();
@@ -17,6 +18,7 @@ router.get('/userGroups/:userId', getUserJoinGroup);
 router.post('/createConversation', createConversation);
 router.post('/createConversation2', createConversation2);
 router.get('/getAllConversationById/:userId', getAllConversationById);
+router.post('/getOrCreateConversation', getOrCreateConversation); // Tạo nhóm hoặc cuộc trò chuyện cá nhân
 
 router.get('/:conversationId', chatInfoController.getChatInfo);
 router.put('/:conversationId', chatInfoController.updateChatName);

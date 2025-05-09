@@ -23,6 +23,7 @@ module.exports = {
         }
     },
     getUserJoinGroup: async (req, res) => {
+        console.log("Dữ liệu req.params.userId:", req.params.userId);
         const userId = req.params.userId;
         try{
             const userGroups = await Conversation.find({
@@ -30,7 +31,7 @@ module.exports = {
                 "participants.userId": userId 
             });
             if (userGroups.length === 0) {
-                return res.status(404).json({ message: 'Người dùng không tham gia nhóm nào.' });
+                return res.status(404).json([]);
               }
           
               res.status(200).json(userGroups);
@@ -114,8 +115,8 @@ module.exports = {
           console.error('Error deleting conversation history:', error);
           res.status(500).json({ message: 'Internal server error' });
         }
-      },
-      disbandGroup: async (req, res) => {
+    },
+    disbandGroup: async (req, res) => {
         const { conversationId } = req.params;
         const { userId } = req.body; // Assuming the user's ID is in the request body
 
@@ -141,5 +142,42 @@ module.exports = {
             console.error('Error disbanding group:', error);
             res.status(500).json({ message: 'Internal server error' });
         }
+    },
+    getOrCreateConversation: async(req, res) => {
+        console.log("Dữ liệu nhận được từ frontend:", req.body);
+        const { user1Id, user2Id } = req.body;
+        if (!user1Id || !user2Id) {
+            return res.status(400).json({ error: "Missing user IDs" });
+        }
+        try {
+            // 1. Tìm cuộc trò chuyện cá nhân (isGroup = false) giữa 2 user
+            let conversation = await Conversation.findOne({
+              isGroup: false,
+              participants: {
+                $all: [
+                  { $elemMatch: { userId: user1Id } },
+                  { $elemMatch: { userId: user2Id } },
+                ],
+              },
+            });
+            console.log("=====Test console Conversation=====:", conversation);
+        
+            // 2. Nếu chưa có thì tạo mới
+            if (!conversation) {
+              conversation = await Conversation.create({
+                isGroup: false,
+                participants: [
+                  { userId: user1Id },
+                  { userId: user2Id },
+                ],
+              });
+            }
+            console.log("TẠO CONVERSATION MỚI:");
+        
+            return res.status(200).json({ conversationId: conversation._id });
+          } catch (error) {
+            console.error("Error in getOrCreateConversation:", error);
+            return res.status(500).json({ error: "Internal server error" });
+          }
     }
 };
