@@ -42,7 +42,8 @@ const {
   deleteMessageChatInfo,
   handleForwardMessage,
   handleLeaveGroup,
-  handleDisbandGroup
+  handleDisbandGroup,
+  handleVerifyPin
 } = require("./handlers/chatInfoSocket");
 const socketConfig = require("../../configs/socketConfig");
 
@@ -237,7 +238,7 @@ module.exports = {
           socket.emit("error", { message: "Invalid data provided on transferGroupAdmin" });
           return
 
- logger.error("Invalid data provided on transferGroupAdmin");
+          logger.error("Invalid data provided on transferGroupAdmin");
         }
         handleTransferGroupAdmin(socket, data, socket.handshake.query.userId, io, callback);
       });
@@ -371,6 +372,11 @@ module.exports = {
           return logger.error("Invalid conversation ID provided on disbandGroup");
         }
         handleDisbandGroup(socket, data, socket.handshake.query.userId, io, callback);
+      });
+
+      // verifyPin
+      socket.on("verifyPin", async (payload, callback) => {
+        await handleVerifyPin(socket, payload, callback);
       });
     });
   },
