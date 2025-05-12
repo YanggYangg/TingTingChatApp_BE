@@ -14,7 +14,8 @@ const profileRouter = Router();
 
 profileRouter.get("/", getProfiles);
 profileRouter.post("/", createProfile);
-profileRouter.get("/:id", authorize, getProfile); 
+// profileRouter.get("/:id", authorize, getProfile); 
+profileRouter.get("/:id", getProfile); 
 profileRouter.post("/:id", authorize , updateProfile);
 profileRouter.delete("/:id", authorize, deleteProfile);
 profileRouter.put("/upload", authorize, upload, uploadImage2 );

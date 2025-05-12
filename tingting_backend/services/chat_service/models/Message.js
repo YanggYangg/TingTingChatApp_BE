@@ -28,6 +28,14 @@ const messageSchema = new mongoose.Schema({
         ref: 'Message',
         default: null
     },
+    isRevoked:{
+        type: Boolean,
+        default: false
+    },
+    deleteBt:[{
+        type: mongoose.Schema.Types.ObjectId, //userId đã xóa tin nhắn này
+        ref: 'User'
+    }],
     linkURL: {
         type: String,
         default: null

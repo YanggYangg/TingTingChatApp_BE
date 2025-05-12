@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signIn, signUp, validateToken, forgotPassword, updateNewPassword, verifyOTP, generateToken, resentOTP, createAccount, signOut } from "../controllers/auth.controller.js";
+import { signIn, signUp, validateToken, forgotPassword, updateNewPassword, verifyOTP, generateToken, resentOTP, createAccount, signOut, changeNewPassword } from "../controllers/auth.controller.js";
 import {authorize} from "../middlewares/auth.middleware.js";
 const authRouter = Router();
 
@@ -22,5 +22,7 @@ authRouter.post("/forgot-password", forgotPassword);
 authRouter.post("/verify-otp", verifyOTP);
 
 authRouter.post("/update-password", updateNewPassword);
+
+authRouter.post("/change-password", authorize, changeNewPassword);
 
 export default authRouter;
