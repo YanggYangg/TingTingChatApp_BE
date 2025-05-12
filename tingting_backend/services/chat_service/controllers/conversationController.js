@@ -179,5 +179,52 @@ module.exports = {
             console.error("Error in getOrCreateConversation:", error);
             return res.status(500).json({ error: "Internal server error" });
           }
+    },
+    getAllConversationById2: async (req, res) => {
+        try {
+            const { userId } = req.params;
+            const { search } = req.query;
+        
+            if (!userId) {
+              return res.status(400).json({ message: 'userId is required' });
+            }
+        
+            // Lấy danh sách conversation có user tham gia
+            let conversations = await Conversation.find({
+              'participants.userId': userId
+            })
+              .populate('participants.userId', 'firstname surname avatar') // Populate user
+              .sort({ updateAt: -1 })
+              .lean();
+        
+            if (!conversations || conversations.length === 0) {
+              return res.status(404).json({ message: 'No conversations found' });
+            }
+        
+            // Nếu có từ khóa tìm kiếm
+            if (search && search.trim() !== '') {
+              const keyword = search.toLowerCase();
+              conversations = conversations.filter(conv => {
+                if (conv.isGroup) {
+                  return conv.name?.toLowerCase().includes(keyword);
+                } else {
+                    const other = conv.participants.find(p => {
+                        const participant = p.userId;
+                        // Nếu đã populate thì userId là object => lấy _id, nếu không thì dùng luôn userId
+                        const id = typeof participant === 'object' && participant !== null ? participant._id : participant;
+                        return id?.toString() !== userId;
+                      });
+                  const first = other?.userId?.firstname?.toLowerCase() || '';
+                  const last = other?.userId?.surname?.toLowerCase() || '';
+                  return first.includes(keyword) || last.includes(keyword);
+                }
+              });
+            }
+        
+            return res.status(200).json(conversations);
+          } catch (error) {
+            console.error('Error fetching conversations:', error.message);
+            return res.status(500).json({ message: 'Error fetching conversations', error: error.message });
+          }
     }
 };
