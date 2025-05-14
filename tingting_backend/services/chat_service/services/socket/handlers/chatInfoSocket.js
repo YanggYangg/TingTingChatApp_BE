@@ -193,172 +193,178 @@ module.exports = {
     }
   },
 
-  async handleAddParticipant(socket, { conversationId, userId: newUserId, role = "member", performerId }, userId, io, callback) {
-    try {
-      // Lấy io từ socket
-      // const io = socket.io;
-      // if (!io || !io.sockets) {
+async handleAddParticipant(socket, { conversationId, userId: newUserId, role = "member", performerId }, userId, io, callback) {
+  try {
+    // Lấy io từ socket
+    const io = socket.nsp;
+    if (!io || typeof io.to !== "function") {
+      logger.error('Socket.IO instance is not properly initialized');
+      socket.emit('error', { message: 'Lỗi máy chủ, vui lòng thử lại sau' });
+      return callback && callback({ success: false, message: 'Lỗi máy chủ' });
+    }
 
-      const io = socket.nsp;
-      if (!io || typeof io.to !== "function") {
-        logger.error('Socket.IO instance is not properly initialized');
-        socket.emit('error', { message: 'Lỗi máy chủ, vui lòng thử lại sau' });
-        return callback && callback({ success: false, message: 'Lỗi máy chủ' });
-      }
+    // Chuẩn hóa performerId
+    const normalizedPerformerId = typeof performerId === "object" ? performerId._id || performerId.id || String(performerId) : performerId;
 
-      // Chuẩn hóa performerId
-      const normalizedPerformerId = typeof performerId === "object" ? performerId._id || performerId.id || String(performerId) : performerId;
+    // Kiểm tra performerId hợp lệ
+    if (!normalizedPerformerId || !mongoose.Types.ObjectId.isValid(normalizedPerformerId)) {
+      logger.error(`performerId không hợp lệ: ${normalizedPerformerId}`);
+      socket.emit("error", { message: "ID người thực hiện không hợp lệ" });
+      return callback && callback({ success: false, message: "ID người thực hiện không hợp lệ" });
+    }
 
-      // Kiểm tra performerId hợp lệ
-      if (!normalizedPerformerId || !mongoose.Types.ObjectId.isValid(normalizedPerformerId)) {
-        logger.error(`performerId không hợp lệ: ${normalizedPerformerId}`);
-        socket.emit("error", { message: "ID người thực hiện không hợp lệ" });
-        return callback && callback({ success: false, message: "ID người thực hiện không hợp lệ" });
-      }
+    // Kiểm tra đầu vào
+    if (!conversationId || !newUserId) {
+      logger.error(`Thiếu tham số: conversationId=${conversationId}, newUserId=${newUserId}`);
+      socket.emit("error", { message: "Thiếu ID hội thoại hoặc ID người dùng" });
+      return callback && callback({ success: false, message: "Thiếu ID hội thoại hoặc ID người dùng" });
+    }
 
-      // Kiểm tra đầu vào
-      if (!conversationId || !newUserId) {
-        logger.error(`Thiếu tham số: conversationId=${conversationId}, newUserId=${newUserId}`);
-        socket.emit("error", { message: "Thiếu ID hội thoại hoặc ID người dùng" });
-        return callback && callback({ success: false, message: "Thiếu ID hội thoại hoặc ID người dùng" });
-      }
+    if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+      logger.error(`conversationId không hợp lệ: ${conversationId}`);
+      socket.emit("error", { message: "ID hội thoại không hợp lệ" });
+      return callback && callback({ success: false, message: "ID hội thoại không hợp lệ" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(newUserId)) {
+      logger.error(`newUserId không hợp lệ: ${newUserId}`);
+      socket.emit("error", { message: "ID người dùng không hợp lệ" });
+      return callback && callback({ success: false, message: "ID người dùng không hợp lệ" });
+    }
 
-      if (!mongoose.Types.ObjectId.isValid(conversationId)) {
-        logger.error(`conversationId không hợp lệ: ${conversationId}`);
-        socket.emit("error", { message: "ID hội thoại không hợp lệ" });
-        return callback && callback({ success: false, message: "ID hội thoại không hợp lệ" });
-      }
-      if (!mongoose.Types.ObjectId.isValid(newUserId)) {
-        logger.error(`newUserId không hợp lệ: ${newUserId}`);
-        socket.emit("error", { message: "ID người dùng không hợp lệ" });
-        return callback && callback({ success: false, message: "ID người dùng không hợp lệ" });
-      }
+    logger.info(`Người dùng ${normalizedPerformerId} đang thêm ${newUserId} vào hội thoại ${conversationId}`);
 
-      logger.info(`Người dùng ${normalizedPerformerId} đang thêm ${newUserId} vào hội thoại ${conversationId}`);
+    // Tìm cuộc trò chuyện
+    const chat = await Conversation.findById(conversationId);
+    if (!chat) {
+      logger.error(`Không tìm thấy hội thoại: ${conversationId}`);
+      socket.emit("error", { message: "Không tìm thấy hội thoại" });
+      return callback && callback({ success: false, message: "Không tìm thấy hội thoại" });
+    }
 
-      // Tìm cuộc trò chuyện
-      const chat = await Conversation.findById(conversationId);
-      if (!chat) {
-        logger.error(`Không tìm thấy hội thoại: ${conversationId}`);
-        socket.emit("error", { message: "Không tìm thấy hội thoại" });
-        return callback && callback({ success: false, message: "Không tìm thấy hội thoại" });
-      }
+    // Kiểm tra xem đây có phải là nhóm không
+    if (!chat.isGroup) {
+      logger.error(`Hội thoại ${conversationId} không phải là nhóm`);
+      socket.emit("error", { message: "Chỉ nhóm mới có thể thêm thành viên" });
+      return callback && callback({ success: false, message: "Chỉ nhóm mới có thể thêm thành viên" });
+    }
 
-      // Kiểm tra xem đây có phải là nhóm không
-      if (!chat.isGroup) {
-        logger.error(`Hội thoại ${conversationId} không phải là nhóm`);
-        socket.emit("error", { message: "Chỉ nhóm mới có thể thêm thành viên" });
-        return callback && callback({ success: false, message: "Chỉ nhóm mới có thể thêm thành viên" });
-      }
+    // Kiểm tra xem người thực hiện có trong nhóm không
+    const currentUser = chat.participants.find((p) => p.userId && p.userId.toString() === normalizedPerformerId);
+    if (!currentUser) {
+      logger.error(`Người dùng ${normalizedPerformerId} không phải thành viên của hội thoại ${conversationId}`);
+      socket.emit("error", { message: "Bạn không phải thành viên của nhóm này" });
+      return callback && callback({ success: false, message: "Bạn không phải thành viên của nhóm này" });
+    }
 
-      // Kiểm tra xem người thực hiện có trong nhóm không
-      const currentUser = chat.participants.find((p) => p.userId.toString() === normalizedPerformerId);
-      if (!currentUser) {
-        logger.error(`Người dùng ${normalizedPerformerId} không phải thành viên của hội thoại ${conversationId}`);
-        socket.emit("error", { message: "Bạn không phải thành viên của nhóm này" });
-        return callback && callback({ success: false, message: "Bạn không phải thành viên của nhóm này" });
-      }
+    // Kiểm tra dữ liệu participants để phát hiện userId không hợp lệ
+    const invalidParticipants = chat.participants.filter((p) => !p.userId || !mongoose.Types.ObjectId.isValid(p.userId));
+    if (invalidParticipants.length > 0) {
+      logger.error(`Dữ liệu participants không hợp lệ trong hội thoại ${conversationId}:`, invalidParticipants);
+      socket.emit("error", { message: "Dữ liệu hội thoại không hợp lệ, vui lòng liên hệ quản trị viên" });
+      return callback && callback({ success: false, message: "Dữ liệu hội thoại không hợp lệ" });
+    }
 
-      // Kiểm tra xem người dùng mới đã có trong nhóm chưa
-      if (chat.participants.some((p) => p.userId.toString() === newUserId)) {
-        logger.warn(`Người dùng ${newUserId} đã là thành viên của nhóm ${conversationId}`);
-        socket.emit("error", { message: "Người dùng đã là thành viên của nhóm" });
-        return callback && callback({ success: false, message: "Người dùng đã là thành viên của nhóm" });
-      }
+    // Kiểm tra xem người dùng mới đã có trong nhóm chưa
+    if (chat.participants.some((p) => p.userId && p.userId.toString() === newUserId)) {
+      logger.warn(`Người dùng ${newUserId} đã là thành viên của nhóm ${conversationId}`);
+      socket.emit("error", { message: "Người dùng đã là thành viên của nhóm" });
+      return callback && callback({ success: false, message: "Người dùng đã là thành viên của nhóm" });
+    }
 
-      // Thêm thành viên mới
-      chat.participants.push({
-        userId: newUserId,
-        role,
-        isPinned: false,
-        mute: null,
-      });
-      chat.updatedAt = new Date();
-      const updatedChat = await chat.save().then((doc) => doc.populate("participants.userId"));
+    // Thêm thành viên mới
+    chat.participants.push({
+      userId: newUserId,
+      role,
+      isPinned: false,
+      mute: null,
+    });
+    chat.updatedAt = new Date();
+    const updatedChat = await chat.save().then((doc) =>
+      doc.populate({ path: "participants.userId", select: "_id" })
+    );
 
-      // Thêm socket vào phòng cho người dùng mới
-      const sockets = await io.fetchSockets();
-      let joined = false;
-      for (const s of sockets) {
-        if (s.userId === newUserId) {
-          s.join(conversationId);
-          logger.info(`Socket ${s.id} của người dùng ${newUserId} đã tham gia phòng ${conversationId}`);
-          joined = true;
-        }
-      }
-      if (!joined) {
-        logger.info(`Không tìm thấy socket đang hoạt động cho người dùng ${newUserId}`);
-      }
+    // Kiểm tra và ghi log participants không hợp lệ sau populate
+    const invalidPopulatedParticipants = updatedChat.participants.filter(
+      (p) => !p.userId || !p.userId._id || !mongoose.Types.ObjectId.isValid(p.userId._id)
+    );
+    if (invalidPopulatedParticipants.length > 0) {
+      logger.error(`Populate thất bại, participants chứa userId không hợp lệ trong hội thoại ${conversationId}:`, invalidPopulatedParticipants);
+    }
 
-      // // Gửi tin nhắn hệ thống
-      // const systemMessage = new Message({
-      //   conversationId,
-      //   userId: null,
-      //   content: `Một thành viên mới đã được thêm vào nhóm`,
-      //   messageType: "system",
-      //   createdAt: new Date(),
-      // });
-      // await systemMessage.save();
-      // io.to(conversationId).emit("newMessage", {
-      //   _id: systemMessage._id,
-      //   conversationId: systemMessage.conversationId,
-      //   content: systemMessage.content,
-      //   messageType: systemMessage.messageType,
-      //   createdAt: systemMessage.createdAt,
-      // });
+    // Chuẩn bị payload cho chatInfoUpdated, bỏ qua participant không hợp lệ
+    const validParticipants = updatedChat.participants.filter(
+      (p) => p.userId && p.userId._id && mongoose.Types.ObjectId.isValid(p.userId._id)
+    );
+    const chatInfoPayload = {
+      _id: updatedChat._id,
+      name: updatedChat.name,
+      isGroup: updatedChat.isGroup,
+      imageGroup: updatedChat.imageGroup,
+      participants: validParticipants.map((p) => ({
+        userId: p.userId._id.toString(),
+        role: p.role,
+        isPinned: p.isPinned,
+        mute: p.mute,
+      })),
+      linkGroup: updatedChat.linkGroup,
+      updatedAt: updatedChat.updatedAt,
+    };
 
-      // Chuẩn bị payload cho chatInfoUpdated
-      const chatInfoPayload = {
-        _id: updatedChat._id,
-        name: updatedChat.name,
-        isGroup: updatedChat.isGroup,
-        imageGroup: updatedChat.imageGroup,
-        participants: updatedChat.participants.map((p) => ({
-          userId: p.userId._id.toString(),
-          role: p.role,
-          isPinned: p.isPinned,
-          mute: p.mute,
-        })),
-        linkGroup: updatedChat.linkGroup,
-        updatedAt: updatedChat.updatedAt,
-      };
-
-      // Gửi sự kiện chatInfoUpdated cho tất cả thành viên
-      io.to(conversationId).emit("chatInfoUpdated", chatInfoPayload);
-
-      // Gửi sự kiện newGroupConversation cho người dùng mới
-      io.to(newUserId).emit("newGroupConversation", {
-        ...chatInfoPayload,
-        createdAt: updatedChat.createdAt,
-      });
-
-      // Gửi phản hồi thành công
-      const responsePayload = {
-        success: true,
-        data: {
-          _id: updatedChat._id,
-          participants: updatedChat.participants.map((p) => ({
-            userId: p.userId._id.toString(),
-            role: p.role,
-          })),
-        },
-      };
-      socket.emit("addParticipantResponse", responsePayload);
-      logger.info(`Người dùng ${newUserId} đã được thêm vào hội thoại ${conversationId} bởi ${normalizedPerformerId}`);
-
-      if (callback) {
-        callback(responsePayload);
-      }
-    } catch (error) {
-      logger.error(`Lỗi khi thêm thành viên ${newUserId} vào hội thoại ${conversationId}: ${error.message}`);
-      const errorMessage = error.message || "Không thể thêm thành viên";
-      socket.emit("error", { message: errorMessage });
-      socket.emit("addParticipantResponse", { success: false, message: errorMessage });
-      if (callback) {
-        callback({ success: false, message: errorMessage, error: error.message });
+    // Thêm tất cả socket của người dùng mới vào phòng hội thoại
+    const sockets = await io.fetchSockets();
+    let joined = false;
+    for (const s of sockets) {
+      if (s.userId === newUserId) {
+        s.join(conversationId);
+        logger.info(`Socket ${s.id} của người dùng ${newUserId} đã tham gia phòng ${conversationId}`);
+        joined = true;
       }
     }
-  },
+    if (!joined) {
+      logger.info(`Không tìm thấy socket đang hoạt động cho người dùng ${newUserId}`);
+    } else {
+      logger.info(`Gửi newGroupConversation đến người dùng ${newUserId} cho hội thoại ${conversationId}`);
+    }
+
+    // Gửi sự kiện chatInfoUpdated cho tất cả thành viên hiện tại
+    io.to(conversationId).emit("chatInfoUpdated", chatInfoPayload);
+
+    // Gửi sự kiện newGroupConversation đến tất cả socket của người dùng mới
+    io.in(newUserId).emit("newGroupConversation", {
+      ...chatInfoPayload,
+      createdAt: updatedChat.createdAt,
+      lastMessage: null, // Đảm bảo ChatList hiển thị nhóm mới mà không cần tin nhắn
+      lastMessageType: null,
+      lastMessageSenderId: null,
+    });
+
+    // Gửi phản hồi thành công với danh sách participant hợp lệ
+    const responsePayload = {
+      success: true,
+      data: {
+        _id: updatedChat._id,
+        participants: validParticipants.map((p) => ({
+          userId: p.userId._id.toString(),
+          role: p.role,
+        })),
+      },
+    };
+    socket.emit("addParticipantResponse", responsePayload);
+    logger.info(`Người dùng ${newUserId} đã được thêm vào hội thoại ${conversationId} bởi ${normalizedPerformerId}`);
+
+    if (callback) {
+      callback(responsePayload);
+    }
+  } catch (error) {
+    logger.error(`Lỗi khi thêm thành viên ${newUserId} vào hội thoại ${conversationId}: ${error.message}`);
+    const errorMessage = error.message || "Không thể thêm thành viên";
+    socket.emit("error", { message: errorMessage });
+    socket.emit("addParticipantResponse", { success: false, message: errorMessage });
+    if (callback) {
+      callback({ success: false, message: errorMessage, error: error.message });
+    }
+  }
+},
   // Xóa thành viên khỏi nhóm
   async handleRemoveParticipant(socket, { conversationId, userId: removeUserId }, userId, io, callback) {
     try {
