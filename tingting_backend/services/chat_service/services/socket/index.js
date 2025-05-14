@@ -43,7 +43,8 @@ const {
   handleForwardMessage,
   handleLeaveGroup,
   handleDisbandGroup,
-  handleVerifyPin
+  handleVerifyPin,
+  handleGetOrCreatePrivateConversation,
 } = require("./handlers/chatInfoSocket");
 const socketConfig = require("../../configs/socketConfig");
 
@@ -377,6 +378,15 @@ module.exports = {
       // verifyPin
       socket.on("verifyPin", async (payload, callback) => {
         await handleVerifyPin(socket, payload, callback);
+      });
+
+      // getOrCreatePrivateConversation
+      socket.on("getOrCreatePrivateConversation", async (payload, callback) => {
+        if (!payload.userId) {
+          socket.emit("error", { message: "Invalid user ID provided on getOrCreatePrivateConversation" });
+          return logger.error("Invalid user ID provided on getOrCreatePrivateConversation");
+        }
+        await handleGetOrCreatePrivateConversation(socket, payload, callback);
       });
     });
   },

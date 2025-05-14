@@ -869,35 +869,35 @@ module.exports = {
   },
 
   // verifyPin
-async handleVerifyPin(socket, payload, callback) {
-  console.log("Inside handleVerifyPin. Type of callback:", typeof callback);
-  try {
-    const { conversationId, userId, pin } = payload;
+  async handleVerifyPin(socket, payload, callback) {
+    console.log("Inside handleVerifyPin. Type of callback:", typeof callback);
+    try {
+      const { conversationId, userId, pin } = payload;
 
-    const chat = await Conversation.findById(conversationId);
-    if (!chat) {
-      return typeof callback === "function" && callback({ success: false, message: "Không tìm thấy cuộc trò chuyện" });
+      const chat = await Conversation.findById(conversationId);
+      if (!chat) {
+        return typeof callback === "function" && callback({ success: false, message: "Không tìm thấy cuộc trò chuyện" });
+      }
+
+      const participant = chat.participants.find((p) => p.userId.toString() === userId);
+      if (!participant) {
+        return typeof callback === "function" && callback({ success: false, message: "Bạn không phải là thành viên của cuộc trò chuyện" });
+      }
+
+      if (!participant.isHidden) {
+        return typeof callback === "function" && callback({ success: true, message: "Cuộc trò chuyện không bị ẩn" });
+      }
+
+      if (participant.pin !== pin) {
+        return typeof callback === "function" && callback({ success: false, message: "Mã PIN không đúng" });
+      }
+
+      typeof callback === "function" && callback({ success: true, message: "Xác thực PIN thành công" });
+    } catch (error) {
+      console.error("Lỗi khi xác thực PIN:", error);
+      typeof callback === "function" && callback({ success: false, message: "Lỗi khi xác thực PIN" });
     }
-
-    const participant = chat.participants.find((p) => p.userId.toString() === userId);
-    if (!participant) {
-      return typeof callback === "function" && callback({ success: false, message: "Bạn không phải là thành viên của cuộc trò chuyện" });
-    }
-
-    if (!participant.isHidden) {
-      return typeof callback === "function" && callback({ success: true, message: "Cuộc trò chuyện không bị ẩn" });
-    }
-
-    if (participant.pin !== pin) {
-      return typeof callback === "function" && callback({ success: false, message: "Mã PIN không đúng" });
-    }
-
-    typeof callback === "function" && callback({ success: true, message: "Xác thực PIN thành công" });
-  } catch (error) {
-    console.error("Lỗi khi xác thực PIN:", error);
-    typeof callback === "function" && callback({ success: false, message: "Lỗi khi xác thực PIN" });
-  }
-},
+  },
 
   // // Xóa lịch sử trò chuyện cho người dùng
   // async handleDeleteChatHistoryForMe(socket, { conversationId }, userId, io, callback) {
@@ -952,68 +952,141 @@ async handleVerifyPin(socket, payload, callback) {
   //   }
   // },
 
-  async handleDeleteAllChatHistory(socket, { conversationId }, userId, io, callback) {
-    try {
-      logger.info(`User ${userId} deleting all chat history for conversation ${conversationId}`);
-      const conversation = await Conversation.findById(conversationId);
-      if (!conversation) {
-        socket.emit("error", { message: "Conversation not found" });
-        return callback && callback({ success: false, message: "Conversation not found" });
-      }
+  // async handleDeleteAllChatHistory(socket, { conversationId }, userId, io, callback) {
+  //   try {
+  //     logger.info(`User ${userId} deleting all chat history for conversation ${conversationId}`);
+  //     const conversation = await Conversation.findById(conversationId);
+  //     if (!conversation) {
+  //       socket.emit("error", { message: "Conversation not found" });
+  //       return callback && callback({ success: false, message: "Conversation not found" });
+  //     }
 
-      // Kiểm tra xem người dùng có trong cuộc trò chuyện không
-      const participant = conversation.participants.find(
-        (p) => p.userId.toString() === userId
-      );
-      if (!participant) {
-        socket.emit("error", { message: "User not found in this conversation" });
-        return callback && callback({ success: false, message: "User not found in this conversation" });
-      }
+  //     const participant = conversation.participants.find(
+  //       (p) => p.userId.toString() === userId
+  //     );
+  //     if (!participant) {
+  //       socket.emit("error", { message: "User not found in this conversation" });
+  //       return callback && callback({ success: false, message: "User not found in this conversation" });
+  //     }
 
-      // Đánh dấu tất cả tin nhắn bị xóa bởi userId
-      await Message.updateMany(
-        { conversationId },
-        { $addToSet: { deletedBy: userId } }
-      );
+  //     // **Chỉnh sửa**: Log trước khi cập nhật messages
+  //     logger.info(`Updating messages for conversation ${conversationId} by user ${userId}`);
+  //     await Message.updateMany(
+  //       { conversationId },
+  //       { $addToSet: { deletedBy: userId } }
+  //     );
 
-      // Tìm tin nhắn hợp lệ cuối cùng (nếu có)
-      const lastValidMessage = await Message.findOne({
-        conversationId,
-        isRevoked: false,
-        deletedBy: { $ne: userId },
-      }).sort({ createdAt: -1 });
+  //     const lastValidMessage = await Message.findOne({
+  //       conversationId,
+  //       isRevoked: false,
+  //       deletedBy: { $ne: userId },
+  //     }).sort({ createdAt: -1 });
 
-      // Cập nhật conversation
-      conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
-      conversation.updatedAt = new Date();
-      await conversation.save();
+  //     conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
+  //     conversation.updatedAt = new Date();
+  //     await conversation.save();
 
-      // **Sửa lỗi**: Kiểm tra danh sách client trong phòng
-      const socketsInRoom = await io.in(conversationId).allSockets();
-      logger.info(`Clients in room ${conversationId}: ${[...socketsInRoom].join(", ")}`);
+  //     // **Chỉnh sửa**: Log danh sách client trong phòng
+  //     const socketsInRoom = await io.in(conversationId).allSockets();
+  //     logger.info(`Clients in room ${conversationId}: ${[...socketsInRoom].join(", ")}`);
 
-      // Phát sự kiện conversationUpdated
-      io.to(conversationId).emit("conversationUpdated", {
-        conversationId,
-        lastMessage: lastValidMessage || null,
-        updatedAt: conversation.updatedAt,
-      });
+  //     // **Chỉnh sửa**: Phát sự kiện đến phòng và client cụ thể
+  //     io.to(conversationId).emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
+  //     socket.emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
+  //     logger.info(`Emitted deleteAllChatHistory to room ${conversationId} and socket ${socket.id}`);
 
-      // **Sửa lỗi**: Gửi userId của người xóa trong sự kiện deleteAllChatHistory
-      io.to(conversationId).emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
-      socket.emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
+  //     io.to(conversationId).emit("conversationUpdated", {
+  //       conversationId,
+  //       lastMessage: lastValidMessage || null,
+  //       updatedAt: conversation.updatedAt,
+  //     });
 
-      logger.info(`All chat history deleted for user ${userId} in conversation ${conversationId}`);
-      if (callback) {
-        callback({ success: true, data: { conversationId } });
-      }
-    } catch (error) {
-      errorHandler(socket, "Failed to delete all chat history", error);
-      if (callback) {
-        callback({ success: false, message: "Failed to delete all chat history" });
+  //     logger.info(`All chat history deleted for user ${userId} in conversation ${conversationId}`);
+  //     if (callback) {
+  //       callback({ success: true, data: { conversationId } });
+  //     }
+  //   } catch (error) {
+  //     logger.error(`Failed to delete chat history for conversation ${conversationId}`, error);
+  //     socket.emit("error", { message: "Failed to delete all chat history" });
+  //     if (callback) {
+  //       callback({ success: false, message: "Failed to delete all chat history" });
+  //     }
+  //   }
+  // },
+
+
+
+async  handleDeleteAllChatHistory(socket, { conversationId }, userId, io, callback) {
+  try {
+    logger.info(`User ${userId} deleting all chat history for conversation ${conversationId}`);
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      socket.emit("error", { message: "Conversation not found" });
+      return callback && callback({ success: false, message: "Conversation not found" });
+    }
+
+    const participant = conversation.participants.find(
+      (p) => p.userId.toString() === userId
+    );
+    if (!participant) {
+      socket.emit("error", { message: "User not found in this conversation" });
+      return callback && callback({ success: false, message: "User not found in this conversation" });
+    }
+
+    logger.info(`Updating messages for conversation ${conversationId} by user ${userId}`);
+    // Đánh dấu tất cả tin nhắn là đã xóa bởi userId
+    await Message.updateMany(
+      { conversationId },
+      { $addToSet: { deletedBy: userId } }
+    );
+
+    // Tìm tin nhắn cuối cùng chưa bị xóa bởi userId
+    const lastValidMessage = await Message.findOne({
+      conversationId,
+      isRevoked: false,
+      deletedBy: { $ne: userId },
+    }).sort({ createdAt: -1 });
+
+    // Cập nhật lastMessage và updatedAt của conversation
+    conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
+    conversation.updatedAt = new Date();
+    await conversation.save();
+
+    // Lấy tất cả socket của userId
+    const userSockets = [];
+    const allSockets = await io.sockets.sockets;
+    for (const [socketId, socketInstance] of allSockets) {
+      if (socketInstance.userId === userId) {
+        userSockets.push(socketInstance);
       }
     }
-  },
+
+    // Gửi sự kiện deleteAllChatHistory đến tất cả socket của userId
+    userSockets.forEach((userSocket) => {
+      userSocket.emit("deleteAllChatHistory", { conversationId, deletedBy: userId });
+      logger.info(`Emitted deleteAllChatHistory to socket ${userSocket.id} for user ${userId}`);
+    });
+
+    // Gửi conversationUpdated đến toàn bộ phòng
+    io.to(conversationId).emit("conversationUpdated", {
+      conversationId,
+      lastMessage: lastValidMessage || null,
+      updatedAt: conversation.updatedAt,
+    });
+    logger.info(`Emitted conversationUpdated to room ${conversationId}`);
+
+    logger.info(`All chat history deleted for user ${userId} in conversation ${conversationId}`);
+    if (callback) {
+      callback({ success: true, data: { conversationId } });
+    }
+  } catch (error) {
+    logger.error(`Failed to delete chat history for conversation ${conversationId}`, error);
+    socket.emit("error", { message: "Failed to delete all chat history" });
+    if (callback) {
+      callback({ success: false, message: "Failed to delete all chat history" });
+    }
+  }
+},
   // Lấy danh sách nhóm chung
   async handleGetCommonGroups(socket, { conversationId }, userId, callback) {
     try {
@@ -1056,7 +1129,7 @@ async handleVerifyPin(socket, payload, callback) {
     }
   },
 
-  // Tìm kiếm tin nhắn trong nhóm
+  // Tìm kiếm tin nhắn trong nhóm 
   async handleFindMessages(socket, { conversationId, query }, userId, callback) {
     try {
       if (!query?.trim()) {
@@ -1101,98 +1174,133 @@ async handleVerifyPin(socket, payload, callback) {
   },
 
   // Xóa tin nhắn
-  async deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
-    try {
-      // Log các tham số nhận được để debug
-      logger.info(`deleteMessageChatInfo called with:`, {
-        messageId,
-        urlIndex,
-        userId,
-        hasIo: !!io,
-        hasCallback: !!callback,
-        callbackType: typeof callback,
-      });
+ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
+  try {
+    // Log các tham số nhận được để debug
+    logger.info(`deleteMessageChatInfo called with:`, {
+      messageId,
+      urlIndex,
+      userId,
+      hasIo: !!io,
+      hasCallback: !!callback,
+      callbackType: typeof callback,
+    });
 
-      logger.info(`User ${userId} attempting to delete URL at index ${urlIndex} of message ${messageId}`);
+    logger.info(`User ${userId} attempting to delete URL at index ${urlIndex} of message ${messageId}`);
 
-      // Kiểm tra messageId và userId hợp lệ
-      if (!mongoose.isValidObjectId(messageId)) {
-        logger.error(`Invalid messageId: ${messageId}`);
-        socket.emit("error", { message: "Invalid message ID" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Invalid message ID" });
-        }
-        return;
+    // Kiểm tra đầu vào
+    if (!mongoose.isValidObjectId(messageId)) {
+      logger.error(`Invalid messageId: ${messageId}`);
+      socket.emit("error", { message: "Invalid message ID" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Invalid message ID" });
       }
-      if (!userId || typeof userId !== "string") {
-        logger.error(`Invalid userId: ${userId}`);
-        socket.emit("error", { message: "Invalid user ID" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Invalid user ID" });
-        }
-        return;
+      return;
+    }
+    if (!userId || typeof userId !== "string") {
+      logger.error(`Invalid userId: ${userId}`);
+      socket.emit("error", { message: "Invalid user ID" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Invalid user ID" });
       }
-      if (!Number.isInteger(urlIndex) || urlIndex < 0) {
-        logger.error(`Invalid urlIndex: ${urlIndex}`);
-        socket.emit("error", { message: "Invalid URL index" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Invalid URL index" });
-        }
-        return;
+      return;
+    }
+    if (!Number.isInteger(urlIndex) || urlIndex < 0) {
+      logger.error(`Invalid urlIndex: ${urlIndex}`);
+      socket.emit("error", { message: "Invalid URL index" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Invalid URL index" });
       }
+      return;
+    }
 
-      // Tìm tin nhắn
-      const message = await Message.findById(messageId).select("conversationId linkURL messageType isRevoked");
-      if (!message) {
-        logger.error(`Message not found: ${messageId}`);
-        socket.emit("error", { message: "Message not found" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Message not found" });
-        }
-        return;
+    // Tìm tin nhắn
+    const message = await Message.findById(messageId).select(
+      "conversationId userId linkURL messageType isRevoked"
+    );
+    if (!message) {
+      logger.error(`Message not found: ${messageId}`);
+      socket.emit("error", { message: "Message not found" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Message not found" });
       }
+      return;
+    }
 
-      // Kiểm tra urlIndex hợp lệ
-      if (!message.linkURL || urlIndex >= message.linkURL.length) {
-        logger.error(`urlIndex ${urlIndex} is invalid for message ${messageId}`);
-        socket.emit("error", { message: "Invalid URL index for this message" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Invalid URL index for this message" });
-        }
-        return;
+    // Kiểm tra tin nhắn đã bị thu hồi
+    if (message.isRevoked) {
+      logger.error(`Message ${messageId} is already revoked`);
+      socket.emit("error", { message: "Cannot delete a revoked message" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Cannot delete a revoked message" });
       }
+      return;
+    }
 
-      // Tìm cuộc trò chuyện
-      const conversation = await Conversation.findById(message.conversationId);
-      if (!conversation) {
-        logger.error(`Conversation not found: ${message.conversationId}`);
-        socket.emit("error", { message: "Conversation not found" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Conversation not found" });
-        }
-        return;
+    // // Kiểm tra quyền xóa (chỉ người gửi được xóa)
+    // if (message.userId.toString() !== userId) {
+    //   logger.error(`User ${userId} is not the sender of message ${messageId}`);
+    //   socket.emit("error", { message: "You are not authorized to delete this message" });
+    //   if (typeof callback === "function") {
+    //     callback({
+    //       success: false,
+    //       message: "You are not authorized to delete this message",
+    //     });
+    //   }
+    //   return;
+    // }
+
+    // Kiểm tra conversationId
+    if (!message.conversationId || !mongoose.isValidObjectId(message.conversationId)) {
+      logger.error(`Invalid conversationId in message ${messageId}`);
+      socket.emit("error", { message: "Invalid conversation ID" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Invalid conversation ID" });
       }
+      return;
+    }
 
-      // Ghi log danh sách participants để debug
-      logger.info(`Conversation participants: ${JSON.stringify(conversation.participants)}`);
-      logger.info(`User ID: ${userId}`);
-
-      // Kiểm tra xem userId có trong participants không
-      const isParticipant = conversation.participants.some(
-        (participant) => participant.userId === userId
-      );
-      if (!isParticipant) {
-        logger.error(`User ${userId} is not a participant in conversation ${message.conversationId}`);
-        socket.emit("error", { message: "You are not authorized to delete messages in this conversation" });
-        if (typeof callback === "function") {
-          callback({
-            success: false,
-            message: "You are not authorized to delete messages in this conversation",
-          });
-        }
-        return;
+    // Tìm cuộc trò chuyện
+    const conversation = await Conversation.findById(message.conversationId);
+    if (!conversation) {
+      logger.error(`Conversation not found: ${message.conversationId}`);
+      socket.emit("error", { message: "Conversation not found" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Conversation not found" });
       }
+      return;
+    }
 
+    // Kiểm tra người dùng là participant
+    const isParticipant = conversation.participants.some(
+      (participant) => participant.userId === userId
+    );
+    if (!isParticipant) {
+      logger.error(`User ${userId} is not a participant in conversation ${message.conversationId}`);
+      socket.emit("error", { message: "You are not authorized to delete messages in this conversation" });
+      if (typeof callback === "function") {
+        callback({
+          success: false,
+          message: "You are not authorized to delete messages in this conversation",
+        });
+      }
+      return;
+    }
+
+    // Kiểm tra urlIndex hợp lệ
+    if (!message.linkURL || urlIndex >= message.linkURL.length) {
+      logger.error(`urlIndex ${urlIndex} is invalid for message ${messageId}`);
+      socket.emit("error", { message: "Invalid URL index for this message" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Invalid URL index for this message" });
+      }
+      return;
+    }
+
+    let isMessageDeleted = false;
+
+    // Xóa URL hoặc toàn bộ tin nhắn
+    if (message.linkURL.length > 1) {
       // Xóa URL tại urlIndex
       const updateResult = await Message.updateOne(
         { _id: messageId },
@@ -1213,89 +1321,105 @@ async handleVerifyPin(socket, payload, callback) {
         { _id: messageId },
         { $pull: { linkURL: null } }
       );
-
-      // Kiểm tra nếu linkURL rỗng thì xóa tin nhắn
-      const updatedMessage = await Message.findById(messageId).select("linkURL conversationId messageType");
-      let isMessageDeleted = false;
-      if (!updatedMessage.linkURL || updatedMessage.linkURL.length === 0) {
-        await Message.deleteOne({ _id: messageId });
-        logger.info(`Deleted message ${messageId} because linkURL is empty`);
-        isMessageDeleted = true;
-      } else {
-        logger.info(`Removed URL at index ${urlIndex} from message ${messageId}`);
-      }
-
-      // Cập nhật lastMessage của cuộc trò chuyện
-      const lastValidMessage = await Message.findOne({
-        conversationId: message.conversationId,
-        isRevoked: false,
-        linkURL: { $exists: true, $ne: [] },
-      }).sort({ createdAt: -1 });
-
-      conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
-      conversation.updatedAt = new Date();
-      await conversation.save();
-
-      // Phát sự kiện socket
-      if (isMessageDeleted) {
-        io.to(message.conversationId.toString()).emit("messageDeleted", {
-          messageId,
-          conversationId: message.conversationId,
-        });
-      }
-
-      io.to(message.conversationId.toString()).emit("conversationUpdated", {
-        conversationId: message.conversationId,
-        lastMessage: lastValidMessage || null,
-        updatedAt: conversation.updatedAt,
-      });
-
-      // Cập nhật media, files, links
-      if (message.messageType === "image" || message.messageType === "video") {
-        const media = await Message.find({
-          conversationId: message.conversationId,
-          messageType: { $in: ["image", "video"] },
-          linkURL: { $exists: true, $ne: [] },
-          isRevoked: false,
-        }).lean();
-        io.to(message.conversationId.toString()).emit("chatMedia", media.length ? media : []);
-      } else if (message.messageType === "file") {
-        const files = await Message.find({
-          conversationId: message.conversationId,
-          messageType: "file",
-          linkURL: { $exists: true, $ne: [] },
-          isRevoked: false,
-        }).lean();
-        io.to(message.conversationId.toString()).emit("chatFiles", files.length ? files : []);
-      } else if (message.messageType === "link") {
-        const links = await Message.find({
-          conversationId: message.conversationId,
-          messageType: "link",
-          linkURL: { $exists: true, $ne: [] },
-          isRevoked: false,
-        }).lean();
-        io.to(message.conversationId.toString()).emit("chatLinks", links.length ? links : []);
-      }
-
-      logger.info(
-        isMessageDeleted
-          ? `Message ${messageId} deleted by user ${userId}`
-          : `URL at index ${urlIndex} of message ${messageId} deleted by user ${userId}`
-      );
-      if (typeof callback === "function") {
-        callback({
-          success: true,
-          data: { messageId, urlIndex, isMessageDeleted },
-        });
-      }
-    } catch (error) {
-      logger.error(`Failed to delete URL at index ${urlIndex} of message ${messageId}: ${error.message}`);
-      errorHandler(socket, "Failed to delete URL", error);
-      if (typeof callback === "function") {
-        callback({ success: false, message: "Failed to delete URL" });
-      }
+      logger.info(`Removed URL at index ${urlIndex} from message ${messageId}`);
+    } else {
+      // Xóa toàn bộ tin nhắn
+      await Message.deleteOne({ _id: messageId });
+      isMessageDeleted = true;
+      logger.info(`Deleted message ${messageId} because it has only one URL`);
     }
-  },
+
+    // Kiểm tra nếu tin nhắn vẫn tồn tại
+    const updatedMessage = isMessageDeleted
+      ? null
+      : await Message.findById(messageId).select("linkURL conversationId messageType");
+
+    // Cập nhật lastMessage của cuộc trò chuyện
+    const lastValidMessage = await Message.findOne({
+      conversationId: message.conversationId,
+      isRevoked: false,
+      linkURL: { $exists: true, $ne: [] },
+    }).sort({ createdAt: -1 });
+
+    conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
+    conversation.updatedAt = new Date();
+    await conversation.save();
+
+    // Phát sự kiện messageDeleted (cho cả hai trường hợp)
+    io.to(message.conversationId.toString()).emit("messageDeleted", {
+      messageId,
+      urlIndex,
+      isMessageDeleted,
+      conversationId: message.conversationId.toString(),
+    });
+    logger.info(`Emitted messageDeleted`, {
+      messageId,
+      urlIndex,
+      isMessageDeleted,
+      conversationId: message.conversationId,
+    });
+
+    // Phát sự kiện conversationUpdated
+    io.to(message.conversationId.toString()).emit("conversationUpdated", {
+      conversationId: message.conversationId.toString(),
+      lastMessage: lastValidMessage || null,
+      updatedAt: conversation.updatedAt,
+    });
+
+    // Phát sự kiện updateChatInfo
+    io.to(message.conversationId.toString()).emit("updateChatInfo", {
+      conversationId: message.conversationId.toString(),
+      messageType: message.messageType,
+    });
+
+    // Cập nhật media, files, links
+    if (message.messageType === "image" || message.messageType === "video") {
+      const media = await Message.find({
+        conversationId: message.conversationId,
+        messageType: { $in: ["image", "video"] },
+        linkURL: { $exists: true, $ne: [] },
+        isRevoked: false,
+      }).lean();
+      io.to(message.conversationId.toString()).emit("chatMedia", media.length ? media : []);
+    } else if (message.messageType === "file") {
+      const files = await Message.find({
+        conversationId: message.conversationId,
+        messageType: "file",
+        linkURL: { $exists: true, $ne: [] },
+        isRevoked: false,
+      }).lean();
+      io.to(message.conversationId.toString()).emit("chatFiles", files.length ? files : []);
+    } else if (message.messageType === "link") {
+      const links = await Message.find({
+        conversationId: message.conversationId,
+        messageType: "link",
+        linkURL: { $exists: true, $ne: [] },
+        isRevoked: false,
+      }).lean();
+      io.to(message.conversationId.toString()).emit("chatLinks", links.length ? links : []);
+    }
+
+    logger.info(
+      isMessageDeleted
+        ? `Message ${messageId} deleted by user ${userId}`
+        : `URL at index ${urlIndex} of message ${messageId} deleted by user ${userId}`
+    );
+
+    // Trả về callback
+    if (typeof callback === "function") {
+      callback({
+        success: true,
+        data: { messageId, urlIndex, isMessageDeleted },
+      });
+    }
+  } catch (error) {
+    logger.error(`Failed to delete URL at index ${urlIndex} of message ${messageId}: ${error.message}`);
+    socket.emit("error", { message: "Failed to delete URL", error: error.message });
+    if (typeof callback === "function") {
+      callback({ success: false, message: "Failed to delete URL", error: error.message });
+    }
+  }
+},
 
   // Chuyển tiếp tin nhắn
   async handleForwardMessage(socket, { messageId, targetConversationIds, userId: forwarderId, content }, userId, io, callback) {
@@ -1532,6 +1656,118 @@ async handleVerifyPin(socket, payload, callback) {
         callback({ success: false, message: "Không thể rời nhóm" });
       }
     }
-  }
-};
+  },
 
+ async handleGetOrCreatePrivateConversation(socket, { userId1, userId2 }, currentUserId, io, callback) {
+  try {
+    // Kiểm tra đầu vào
+    if (!userId1 || !userId2 || userId1 === userId2 || typeof userId1 !== "string" || typeof userId2 !== "string") {
+      logger.error(`Invalid input: userId1=${userId1}, userId2=${userId2}`);
+      socket.emit("error", { message: "Invalid user IDs or same user" });
+      return callback && callback({ success: false, message: "Invalid user IDs or same user" });
+    }
+
+    if (currentUserId !== userId1) {
+      logger.error(`Unauthorized: currentUserId=${currentUserId} does not match userId1=${userId1}`);
+      socket.emit("error", { message: "Unauthorized request" });
+      return callback && callback({ success: false, message: "Unauthorized request" });
+    }
+
+    // Kiểm tra xem userId1 và userId2 có tồn tại trong collection users
+    const usersExist = await User.find({ _id: { $in: [userId1, userId2] } }).select("_id");
+    if (usersExist.length !== 2) {
+      logger.error(`One or both users do not exist: userId1=${userId1}, userId2=${userId2}`);
+      socket.emit("error", { message: "One or both users do not exist" });
+      return callback && callback({ success: false, message: "One or both users do not exist" });
+    }
+
+    logger.info(`User ${userId1} requesting private conversation with ${userId2}`);
+
+    // Tìm hội thoại cá nhân đã tồn tại
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      participants: {
+        $all: [
+          { $elemMatch: { userId: userId1 } },
+          { $elemMatch: { userId: userId2 } },
+        ],
+        $size: 2, // Chỉ có 2 người tham gia
+      },
+    }).populate("lastMessage");
+
+    // Nếu không tìm thấy, tạo hội thoại mới
+    if (!conversation) {
+      logger.info(`No existing private conversation found between ${userId1} and ${userId2}. Creating new one.`);
+
+      conversation = new Conversation({
+        isGroup: false,
+        participants: [
+          { userId: userId1, role: "member", isPinned: false, mute: null, isHidden: false },
+          { userId: userId2, role: "member", isPinned: false, mute: null, isHidden: false },
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await conversation.save();
+    }
+
+    // Tham gia phòng socket cho người gửi
+    socket.join(conversation._id.toString());
+    logger.info(`Socket ${socket.id} joined room ${conversation._id}`);
+
+    // Tìm socket của userId2 và cho họ tham gia phòng nếu đang online
+    const sockets = await io.fetchSockets();
+    for (const s of sockets) {
+      if (s.userId === userId2) {
+        s.join(conversation._id.toString());
+        logger.info(`Socket ${s.id} of user ${userId2} joined room ${conversation._id}`);
+      }
+    }
+
+    // Chuẩn bị payload trả về
+    const payload = {
+      _id: conversation._id.toString(),
+      isGroup: conversation.isGroup,
+      participants: conversation.participants.map((p) => ({
+        userId: p.userId,
+        role: p.role,
+        isPinned: p.isPinned,
+        mute: p.mute,
+        isHidden: p.isHidden || false,
+      })),
+      lastMessage: conversation.lastMessage
+        ? {
+            _id: conversation.lastMessage._id.toString(),
+            content: conversation.lastMessage.content,
+            messageType: conversation.lastMessage.messageType,
+            userId: conversation.lastMessage.userId || null,
+            createdAt: conversation.lastMessage.createdAt,
+          }
+        : null,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    };
+
+    // Gửi sự kiện newGroupConversation cho userId2 (nếu là hội thoại mới)
+    if (!conversation.lastMessage) {
+      io.to(userId2).emit("newGroupConversation", payload);
+      logger.info(`Emitted newGroupConversation to user ${userId2} for conversation ${conversation._id}`);
+    }
+
+    // Gửi phản hồi cho client
+    socket.emit("privateConversation", payload);
+    logger.info(`Private conversation ${conversation._id} sent to user ${userId1}`);
+
+    if (callback) {
+      callback({ success: true, conversation: payload });
+    }
+  } catch (error) {
+    logger.error(`Failed to get or create private conversation: ${error.message}`);
+    errorHandler(socket, "Failed to get or create private conversation", error);
+    if (callback) {
+      callback({ success: false, message: "Failed to get or create private conversation", error: error.message });
+    }
+  }
+},
+};
