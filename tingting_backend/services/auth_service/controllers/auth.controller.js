@@ -128,51 +128,50 @@ export const signIn = async (req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    const createdAt = existingUser.createdAt.getTime();
-    const currentTime = new Date().getTime();
-    const timeDiff = currentTime - createdAt;
-    const threeMinutes = 3 * 60 * 1000; // 3 phút
-    if (timeDiff < threeMinutes) {
-      const token = jwt.sign(
-        { id: existingUser._id, phone: existingUser.phone },
-        JWT_SECRET,
-        {
-          expiresIn: JWT_EXPIRES_IN,
-        }
-      );
-      await redisClient.set(`${phone}:token`, token, {
-        EX: 60 * 60 * 1,
-      });
-      return res.status(200).json({
-        success: true,
-        login: true,
-        message: "User logged in successfully",
-        data: {
-          user: existingUser,
-          token,
-        },
-      });
-    } else {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // const createdAt = existingUser.createdAt.getTime();
+    // const currentTime = new Date().getTime();
+    // const timeDiff = currentTime - createdAt;
+    // const threeMinutes = 3 * 60 * 1000; // 3 phút
+    // if (timeDiff < threeMinutes) {
+    //   const token = jwt.sign(
+    //     { id: existingUser._id, phone: existingUser.phone },
+    //     JWT_SECRET,
+    //     {
+    //       expiresIn: JWT_EXPIRES_IN,
+    //     }
+    //   );
+    //   await redisClient.set(`${phone}:token`, token, {
+    //     EX: 60 * 60 * 10,
+    //   });
+    //   return res.status(200).json({
+    //     success: true,
+    //     login: true,
+    //     message: "User logged in successfully",
+    //     data: {
+    //       user: existingUser,
+    //       token,
+    //     },
+    //   });
+    // } else
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      await redisClient.set(`${phone}:sign-in`, otp, {
-        EX: 60 * 5,
-      });
-      // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
+    await redisClient.set(`${phone}:sign-in`, otp, {
+      EX: 60 * 5,
+    });
+    // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
 
-      // const response = await axios.get(
-      //   `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
-      // );
-      // if (response.status !== 200) {
-      //   const error = new Error("Failed to send OTP");
-      //   error.statusCode = 500;
-      //   throw error;
-      // }
-      res.status(200).json({
-        success: true,
-        message: "Valid data! Check your phone for the OTP",
-      });
-    }
+    // const response = await axios.get(
+    //   `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
+    // );
+    // if (response.status !== 200) {
+    //   const error = new Error("Failed to send OTP");
+    //   error.statusCode = 500;
+    //   throw error;
+    // }
+    res.status(200).json({
+      success: true,
+      message: "Valid data! Check your phone for the OTP",
+    });
   } catch (error) {
     next(error);
   }
@@ -206,12 +205,16 @@ export const generateToken = async (req, res, next) => {
     await redisClient.set(`${phone}:token`, token, {
       EX: 60 * 60 * 1,
     });
+    const profile = await axios.get(
+      `http://localhost:${PORT_USER_SERVICE}/api/v1/profile/${existingUser.userId}`
+    );
 
     res.status(200).json({
       success: true,
       message: "User logged in successfully",
       data: {
         user: existingUser,
+        profile: profile.data,
         token,
       },
     });
@@ -235,16 +238,16 @@ export const resentOTP = async (req, res, next) => {
     await redisClient.set(`${phone}:sign-in`, otp, {
       EX: 60 * 5,
     });
-    // const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
+    const message = `Mã OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với bất kỳ ai khác. Mã sẽ hết hạn sau 5 phút.`;
 
-    // const response = await axios.get(
-    //   `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
-    // );
-    // if (response.status !== 200) {
-    //   const error = new Error("Failed to send OTP");
-    //   error.statusCode = 500;
-    //   throw error;
-    // }
+    const response = await axios.get(
+      `https://admin.freesms.vn/services/send.php?key=e72265fc102bed73c044e6a59227aff746c4e834&number=${phone}&message=${message}&devices=108&type=sms&prioritize=1`
+    );
+    if (response.status !== 200) {
+      const error = new Error("Failed to send OTP");
+      error.statusCode = 500;
+      throw error;
+    }
     res.status(200).json({
       success: true,
       message: "Mã OTP đã được gửi lại thành công!",
@@ -293,11 +296,18 @@ export const validateToken = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+
     //get phone from token
     const decoded = jwt.verify(token, JWT_SECRET);
     const phone = decoded.claims.phone;
     console.log("Phone", phone);
     console.log("Decoded token = ", token);
+
+    const isRevoked = await redisClient.get(token);
+    if (isRevoked) {
+      return res.status(401).json({ message: "Token has been revoked" });
+    }
+
     if (phone) {
       const tokenRedis = await redisClient.get(`${phone}:token`);
       if (tokenRedis !== null && token === tokenRedis) {
@@ -309,11 +319,6 @@ export const validateToken = async (req, res, next) => {
         next(new Error("Token is not valid"));
       }
     } else {
-      const isRevoked = await redisClient.get(token);
-      if (isRevoked) {
-        return res.status(401).json({ message: "Token has been revoked" });
-      }
-
       return res.status(200).json({ message: "Token is valid" });
     }
   } catch (error) {
@@ -378,6 +383,33 @@ export const updateNewPassword = async (req, res, next) => {
 
     if (!user)
       return res.status(404).json({ message: "Người dùng không tồn tại" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Đổi mật khẩu thành công!",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const changeNewPassword = async (req, res, next) => {
+  const { phone, oldPassword, newPassword } = req.body;
+  try {
+    const user = await User.findOne({ phone });
+    if (!user)
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
+
+    const isPasswordCorrect = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordCorrect) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Mật khẩu cũ không đúng" });
+    }
 
     user.password = await bcrypt.hash(newPassword, 10);
     user.otp = null;

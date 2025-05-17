@@ -8,99 +8,207 @@ const sendMessageToQueue = require("../../../rabbitmq/producer");
 
 module.exports = {
   // Xử lý gửi tin nhắn
-  async handleSendMessage(socket, { conversationId, message }, userId, io) {
-    if (!conversationId || !message) {
-      return errorHandler(socket, "Invalid message data");
-    }
+  // async handleSendMessage(socket, { conversationId, message }, userId, io) {
+  //   if (!conversationId || !message) {
+  //     return errorHandler(socket, "Invalid message data");
+  //   }
 
-    if (!message.content?.trim() && message.messageType === "text") {
-      return errorHandler(socket, "Text message cannot be empty");
-    }
+  //   if (!message.content?.trim() && message.messageType === "text") {
+  //     return errorHandler(socket, "Text message cannot be empty");
+  //   }
 
-    if (
-      ["image", "file", "video"].includes(message.messageType) &&
-      !message.linkURL
-    ) {
-      return errorHandler(socket, "File message must have a linkURL");
-    }
+  //   if (
+  //     ["image", "file", "video"].includes(message.messageType) &&
+  //     !message.linkURL
+  //   ) {
+  //     return errorHandler(socket, "File message must have a linkURL");
+  //   }
 
-    try {
-      const newMessage = new Message({
-        conversationId,
-        userId,
-        content: message.content?.trim() || "",
-        messageType: message.messageType,
-        replyMessageId: message.replyMessageId || null,
-        isRevoked: false,
-        deletedBy: [],
-        linkURL: message.linkURL || [],
-        status: {
-          sent: true,
-          receivedBy: [],
-          readBy: [],
-        },
-        createdAt: new Date(),
-      });
+  //   try {
+  //     const newMessage = new Message({
+  //       conversationId,
+  //       userId,
+  //       content: message.content?.trim() || "",
+  //       messageType: message.messageType,
+  //       replyMessageId: message.replyMessageId || null,
+  //       isRevoked: false,
+  //       deletedBy: [],
+  //       linkURL: message.linkURL || [],
+  //       status: {
+  //         sent: true,
+  //         receivedBy: [],
+  //         readBy: [],
+  //       },
+  //       createdAt: new Date(),
+  //     });
 
-      const savedMessage = await newMessage.save();
-      logger.info(`Message saved: ${savedMessage._id}`);
+  //     const savedMessage = await newMessage.save();
+  //     logger.info(`Message saved: ${savedMessage._id}`);
 
-      // Cập nhật tin nhắn cuối trong cuộc trò chuyện
-      const conversation = await Conversation.findById(conversationId);
-      if (conversation) {
-        conversation.lastMessage = savedMessage._id;
-        conversation.updatedAt = new Date();
-        await conversation.save();
-        logger.info(`Conversation updated: ${conversationId}`);
+  //     // Cập nhật tin nhắn cuối trong cuộc trò chuyện
+  //     const conversation = await Conversation.findById(conversationId);
+  //     if (conversation) {
+  //       conversation.lastMessage = savedMessage._id;
+  //       conversation.updatedAt = new Date();
+  //       await conversation.save();
+  //       logger.info(`Conversation updated: ${conversationId}`);
 
-        //Gửi vào hàng đợi RabbitMQ
-        // await sendMessageToQueue({
-        //     userId,
-        //     conversationId,
-        //     messageId: savedMessage._id,
-        //     content: savedMessage.content,
-        //     createdAt: savedMessage.createdAt,
-        // });
+  //       //Gửi vào hàng đợi RabbitMQ
+  //       // await sendMessageToQueue({
+  //       //     userId,
+  //       //     conversationId,
+  //       //     messageId: savedMessage._id,
+  //       //     content: savedMessage.content,
+  //       //     createdAt: savedMessage.createdAt,
+  //       // });
 
-        const recipients = conversation.participants.filter(
-            (participant) => participant.userId.toString() !== userId.toString()
-          );
-          console.log("Recipients:", recipients);
-          // Gửi thông báo cho từng người nhận
-          for (const recipient of recipients) {
-            const recipientId = recipient.userId; // Lấy userId của người nhận
+  //       const recipients = conversation.participants.filter(
+  //           (participant) => participant.userId.toString() !== userId.toString()
+  //         );
+  //         console.log("Recipients:", recipients);
+  //         // Gửi thông báo cho từng người nhận
+  //         for (const recipient of recipients) {
+  //           const recipientId = recipient.userId; // Lấy userId của người nhận
           
-            await sendMessageToQueue({
-              userId: recipientId,  // Gửi đến userId của người nhận
-              conversationId,
-              messageId: savedMessage._id,
-              //content: savedMessage.content,
-              content: `Bạn có tin nhắn mới`,
-              createdAt: savedMessage.createdAt,
-              typeNotice: "new_message",
-              data: {
-                screen: "ChatScreen",
-                type: "chat",
-              },
-            });
-            console.log("Sending to recipientId:", recipient.userId);
-            console.log(`Message sent to recipient: ${recipientId}`);
-          }
-        // Emit các sự kiện
-        socket.to(conversationId).emit("receiveMessage", savedMessage);
-        socket.emit("messageSent", savedMessage);
+  //           await sendMessageToQueue({
+  //             userId: recipientId,  // Gửi đến userId của người nhận
+  //             conversationId,
+  //             messageId: savedMessage._id,
+  //             //content: savedMessage.content,
+  //             content: `Bạn có tin nhắn mới`,
+  //             createdAt: savedMessage.createdAt,
+  //             typeNotice: "new_message",
+  //             data: {
+  //               screen: "ChatScreen",
+  //               type: "chat",
+  //             },
+  //           });
+  //           console.log("Sending to recipientId:", recipient.userId);
+  //           console.log(`Message sent to recipient: ${recipientId}`);
+  //         }
+  //       // Emit các sự kiện
+  //       socket.to(conversationId).emit("receiveMessage", savedMessage);
+  //       socket.emit("messageSent", savedMessage);
 
-        // Emit thông tin cập nhật cuộc trò chuyện cho tất cả người dùng
-        io.to(conversationId).emit("conversationUpdated", {
-          conversationId,
-          lastMessage: savedMessage,
-          updatedAt: conversation.updatedAt,
-        });
-      }
-    } catch (error) {
-      errorHandler(socket, "Failed to send message", error);
+  //       // Emit thông tin cập nhật cuộc trò chuyện cho tất cả người dùng
+  //       io.to(conversationId).emit("conversationUpdated", {
+  //         conversationId,
+  //         lastMessage: savedMessage,
+  //         updatedAt: conversation.updatedAt,
+  //       });
+  //     }
+  //   } catch (error) {
+  //     errorHandler(socket, "Failed to send message", error);
+  //   }
+  // },
+
+  async handleSendMessage(socket, { conversationId, message }, userId, io) {
+  if (!conversationId || !message) {
+    return errorHandler(socket, "Invalid message data");
+  }
+
+  if (!message.content?.trim() && message.messageType === "text") {
+    return errorHandler(socket, "Text message cannot be empty");
+  }
+
+  if (
+    ["image", "file", "video"].includes(message.messageType) &&
+    !message.linkURL
+  ) {
+    return errorHandler(socket, "File message must have a linkURL");
+  }
+
+  try {
+    // Tạo và lưu tin nhắn mới
+    const newMessage = new Message({
+      conversationId,
+      userId,
+      content: message.content?.trim() || "",
+      messageType: message.messageType,
+      replyMessageId: message.replyMessageId || null,
+      isRevoked: false,
+      deletedBy: [],
+      linkURL: message.linkURL || [],
+      status: {
+        sent: true,
+        receivedBy: [],
+        readBy: [],
+      },
+      createdAt: new Date(),
+    });
+
+    const savedMessage = await newMessage.save();
+    logger.info(`Message saved: ${savedMessage._id}`, {
+      timestamp: savedMessage.createdAt,
+    });
+
+    // Cập nhật tin nhắn cuối trong cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return errorHandler(socket, "Conversation not found");
     }
-  },
+
+    conversation.lastMessage = savedMessage._id;
+    conversation.updatedAt = new Date();
+    await conversation.save();
+    logger.info(`Conversation updated: ${conversationId}`, {
+      timestamp: conversation.updatedAt,
+    });
+
+    // Gửi vào hàng đợi RabbitMQ (với cơ chế xử lý lỗi)
+    const recipients = conversation.participants.filter(
+      (participant) => participant.userId.toString() !== userId.toString()
+    );
+    console.log("Recipients:", recipients);
+
+    for (const recipient of recipients) {
+      const recipientId = recipient.userId;
+      try {
+        await sendMessageToQueue({
+          userId: recipientId,
+          conversationId,
+          messageId: savedMessage._id,
+          content: `Bạn có tin nhắn mới`,
+          createdAt: savedMessage.createdAt,
+          typeNotice: "new_message",
+          data: {
+            screen: "ChatScreen",
+            type: "chat",
+          },
+        });
+        console.log(`Message sent to queue for recipient: ${recipientId}`);
+      } catch (error) {
+        console.error(`Error sending message to queue for recipient ${recipientId}:`, error);
+        // Tiếp tục xử lý, không làm gián đoạn gửi socket
+      }
+      console.log(`Sending to recipientId: ${recipientId}`);
+      console.log(`Message sent to recipient: ${recipientId}`);
+    }
+
+    // Emit các sự kiện socket
+    socket.to(conversationId).emit("receiveMessage", savedMessage);
+    socket.emit("messageSent", savedMessage);
+
+    // Emit thông tin cập nhật cuộc trò chuyện
+    io.to(conversationId).emit("conversationUpdated", {
+      conversationId,
+      lastMessage: savedMessage,
+      updatedAt: conversation.updatedAt,
+    });
+
+    // Emit sự kiện updateChatInfo cho tất cả client trong phòng
+    if (["image", "video", "file", "link"].includes(savedMessage.messageType)) {
+      io.to(conversationId).emit("updateChatInfo", {
+        conversationId,
+        messageType: savedMessage.messageType,
+      });
+      logger.info(`Emitted updateChatInfo for conversation: ${conversationId}, messageType: ${savedMessage.messageType}`);
+    }
+
+  } catch (error) {
+    errorHandler(socket, "Failed to send message", error);
+  }
+},
 
   // Xử lý xóa tin nhắn
   async handleDeleteMessage(socket, { messageId }, userId, io) {
