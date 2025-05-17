@@ -58,6 +58,15 @@ module.exports = {
 
       const userConversations = {};
 
+      const { userId } = socket.handshake.query;
+
+  if (userId) {
+    socket.join(userId); // ✅ Quan trọng: join vào phòng riêng
+    console.log(`📡 User ${userId} đã join room cá nhân`);
+  } else {
+    console.warn("⚠️ Không có userId trong query socket");
+  }
+  
       // Join conversation
       socket.on("joinConversation", (data) => {
         if (!data.conversationId) {

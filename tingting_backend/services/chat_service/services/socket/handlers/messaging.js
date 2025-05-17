@@ -63,29 +63,43 @@ module.exports = {
         // });
 
         const recipients = conversation.participants.filter(
-            (participant) => participant.userId.toString() !== userId.toString()
-          );
-          console.log("Recipients:", recipients);
-          // Gửi thông báo cho từng người nhận
-          for (const recipient of recipients) {
-            const recipientId = recipient.userId; // Lấy userId của người nhận
-          
-            await sendMessageToQueue({
-              userId: recipientId,  // Gửi đến userId của người nhận
-              conversationId,
-              messageId: savedMessage._id,
-              //content: savedMessage.content,
-              content: `Bạn có tin nhắn mới`,
-              createdAt: savedMessage.createdAt,
-              typeNotice: "new_message",
-              data: {
-                screen: "ChatScreen",
-                type: "chat",
-              },
-            });
-            console.log("Sending to recipientId:", recipient.userId);
-            console.log(`Message sent to recipient: ${recipientId}`);
-          }
+          (participant) => participant.userId.toString() !== userId.toString()
+        );
+        console.log("Recipients:", recipients);
+        // Gửi thông báo cho từng người nhận
+        for (const recipient of recipients) {
+          const recipientId = recipient.userId; // Lấy userId của người nhận
+
+          //Send to RabbitMQ
+          await sendMessageToQueue({
+            userId: recipientId, // Gửi đến userId của người nhận
+            conversationId,
+            messageId: savedMessage._id,
+            //content: savedMessage.content,
+            content: `Bạn có tin nhắn mới`,
+            createdAt: savedMessage.createdAt,
+            typeNotice: "new_message",
+            data: {
+              screen: "ChatScreen",
+              type: "chat",
+            },
+          });
+
+          //Send socket real-time to mobile
+          io.to(recipientId.toString()).emit("new_notification", {
+            typeNotice: "new_message",
+            content: `Bạn có tin nhắn mới thiệt nè`,
+            conversationId,
+            messageId: savedMessage._id,
+            createdAt: savedMessage.createdAt,
+          });
+
+          console.log("Socket Notification sent to recipientId:", recipientId);
+
+          console.log("Sending to recipientId:", recipient.userId);
+          console.log(`Message sent to recipient: ${recipientId}`);
+        }
+
         // Emit các sự kiện
         socket.to(conversationId).emit("receiveMessage", savedMessage);
         socket.emit("messageSent", savedMessage);
