@@ -1,0 +1,86 @@
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - app-network
+
+  auth_service:
+    build:
+      context: .
+      dockerfile: auth_service/DockerFile
+    ports:
+      - "3002:3002"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  user_service:
+    build:
+      context: .
+      dockerfile: user_service/DockerFile
+    ports:
+      - "3001:3001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  chat_service:
+    build:
+      context: .
+      dockerfile: chat_service/DockerFile
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+  notification_service:
+    build:
+      context: .
+      dockerfile: notification_service/DockerFile
+    ports:
+      - "3003:3003"
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+
+  cloud_service:
+    build:
+      context: .
+      dockerfile: cloud-service/DockerFile
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 

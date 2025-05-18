@@ -1,0 +1,20 @@
+# Dùng Node.js nhẹ
+FROM node:20-alpine
+
+# Làm việc tại thư mục bên trong container
+WORKDIR /app
+
+# Copy package.json và package-lock.json của cloud_service
+COPY cloud-service/package*.json ./
+
+# Cài dependencies
+RUN npm install --production
+
+# Copy toàn bộ mã nguồn của cloud_service vào container
+COPY cloud-service/ .
+
+# Mở port service
+EXPOSE 3000
+
+# Chạy ứng dụng
+CMD ["node", "server.js"]

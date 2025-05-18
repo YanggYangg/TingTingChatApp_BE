@@ -43,7 +43,7 @@ const {
   handleForwardMessage,
   handleLeaveGroup,
   handleDisbandGroup,
-  handleVerifyPin
+  handleVerifyPin,
 } = require("./handlers/chatInfoSocket");
 const socketConfig = require("../../configs/socketConfig");
 
@@ -68,31 +68,50 @@ module.exports = {
 
       const userConversations = {};
 
+      const { userId } = socket.handshake.query;
+
+      if (userId) {
+        socket.join(userId); // ✅ Quan trọng: join vào phòng riêng
+        console.log(`📡 User ${userId} đã join room cá nhân`);
+      } else {
+        console.warn("⚠️ Không có userId trong query socket");
+      }
+
       // Join conversation
       socket.on("joinConversation", (data) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on join" });
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on join",
+          });
           return logger.error("Invalid conversation ID provided on join");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for joinConversation");
         }
         if (!userConversations[socket.handshake.query.userId]) {
           userConversations[socket.handshake.query.userId] = [];
         }
-        userConversations[socket.handshake.query.userId].push(data.conversationId);
+        userConversations[socket.handshake.query.userId].push(
+          data.conversationId
+        );
         handleJoinConversation(socket, data, socket.handshake.query.userId);
       });
 
       // Leave conversation
       socket.on("leaveConversation", (data) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on leave" });
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on leave",
+          });
           return logger.error("Invalid conversation ID provided on leave");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for leaveConversation");
         }
         handleLeaveConversation(socket, data, socket.handshake.query.userId);
@@ -105,7 +124,9 @@ module.exports = {
           return logger.error("Invalid message data provided");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for sendMessage");
         }
         handleSendMessage(socket, data, socket.handshake.query.userId, io);
@@ -130,7 +151,11 @@ module.exports = {
 
       // Read message
       socket.on("readMessage", (data) => {
-        if (!data.conversationId || !data.messageId || !socket.handshake.query.userId) {
+        if (
+          !data.conversationId ||
+          !data.messageId ||
+          !socket.handshake.query.userId
+        ) {
           socket.emit("error", { message: "Invalid read message data" });
           return logger.error("Invalid read message data");
         }
@@ -139,12 +164,19 @@ module.exports = {
 
       // Call events
       socket.on("initiateCall", (data) => {
-        if (!data.conversationId || !data.callerId || !data.receiverId || !data.callType) {
+        if (
+          !data.conversationId ||
+          !data.callerId ||
+          !data.receiverId ||
+          !data.callType
+        ) {
           socket.emit("error", { message: "Invalid call initiation data" });
           return logger.error("Invalid call initiation data");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for initiateCall");
         }
         handleInitiateCall(socket, data, io);
@@ -156,7 +188,9 @@ module.exports = {
           return logger.error("Invalid call answer data");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for answerCall");
         }
         handleAnswerCall(socket, data, socket.handshake.query.userId, io);
@@ -168,7 +202,9 @@ module.exports = {
           return logger.error("Invalid call end data");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for endCall");
         }
         handleEndCall(socket, data, socket.handshake.query.userId, io);
@@ -178,7 +214,9 @@ module.exports = {
       socket.on("loadConversations", async () => {
         const userId = socket.handshake.query.userId;
         if (!userId) {
-          socket.emit("error", { message: "Invalid user ID provided on loadConversations" });
+          socket.emit("error", {
+            message: "Invalid user ID provided on loadConversations",
+          });
           return logger.error("Invalid user ID provided on loadConversations");
         }
         await handleLoadConversations(socket, userId);
@@ -187,24 +225,37 @@ module.exports = {
       // Delete message (from messaging handler)
       socket.on("messageDeleted", (data) => {
         if (!data.messageId) {
-          socket.emit("error", { message: "Invalid message ID provided on delete" });
+          socket.emit("error", {
+            message: "Invalid message ID provided on delete",
+          });
           return logger.error("Invalid message ID provided on delete");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for messageDeleted");
         }
-        handleDeleteMessageMessaging(socket, data, socket.handshake.query.userId, io);
+        handleDeleteMessageMessaging(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io
+        );
       });
 
       // Revoke message
       socket.on("messageRevoked", (data) => {
         if (!data.messageId) {
-          socket.emit("error", { message: "Invalid message ID provided on revoke" });
+          socket.emit("error", {
+            message: "Invalid message ID provided on revoke",
+          });
           return logger.error("Invalid message ID provided on revoke");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for messageRevoked");
         }
         handleRevokeMessage(socket, data, socket.handshake.query.userId, io);
@@ -214,7 +265,9 @@ module.exports = {
       socket.on("createConversation", (groupData, callback) => {
         console.log("Nhận sự kiện createConversation:", groupData);
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for createConversation");
         }
         createGroupConversation(socket, groupData, callback);
@@ -223,147 +276,277 @@ module.exports = {
       // Conversation removed
       socket.on("conversationRemoved", (data) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on conversationRemoved" });
-          return logger.error("Invalid conversation ID provided on conversationRemoved");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on conversationRemoved",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on conversationRemoved"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for conversationRemoved");
         }
-        handleConversationRemoved(socket, data, socket.handshake.query.userId, io);
+        handleConversationRemoved(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io
+        );
       });
 
       // Chat info events
       socket.on("getChatInfo", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on getChatInfo" });
-          return logger.error("Invalid conversation ID provided on getChatInfo");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on getChatInfo",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on getChatInfo"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for getChatInfo");
         }
-        handleGetChatInfo(socket, data, socket.handshake.query.userId, callback);
+        handleGetChatInfo(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("updateChatName", (data, callback) => {
         if (!data.conversationId || !data.name) {
-          socket.emit("error", { message: "Invalid data provided on updateChatName" });
+          socket.emit("error", {
+            message: "Invalid data provided on updateChatName",
+          });
           return logger.error("Invalid data provided on updateChatName");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for updateChatName");
         }
-        handleUpdateChatName(socket, data, socket.handshake.query.userId, io, callback);
+        handleUpdateChatName(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("updateGroupImage", (data, callback) => {
         if (!data.conversationId || !data.imageUrl) {
-          socket.emit("error", { message: "Invalid data provided on updateGroupImage" });
+          socket.emit("error", {
+            message: "Invalid data provided on updateGroupImage",
+          });
           return logger.error("Invalid data provided on updateGroupImage");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for updateGroupImage");
         }
-        handleUpdateGroupImage(socket, data, socket.handshake.query.userId, io, callback);
+        handleUpdateGroupImage(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("addParticipant", async (data, callback) => {
         if (!data.conversationId || !data.userId) {
-          socket.emit("error", { message: "Invalid conversation ID or user ID provided" });
-          return logger.error("Invalid conversation ID or user ID provided on addParticipant");
+          socket.emit("error", {
+            message: "Invalid conversation ID or user ID provided",
+          });
+          return logger.error(
+            "Invalid conversation ID or user ID provided on addParticipant"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for addParticipant");
         }
-        await handleAddParticipant(socket, data, socket.handshake.query.userId, io, callback);
+        await handleAddParticipant(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("removeParticipant", (data, callback) => {
         if (!data.conversationId || !data.userId) {
-          socket.emit("error", { message: "Invalid data provided on removeParticipant" });
+          socket.emit("error", {
+            message: "Invalid data provided on removeParticipant",
+          });
           return logger.error("Invalid data provided on removeParticipant");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for removeParticipant");
         }
-        handleRemoveParticipant(socket, data, socket.handshake.query.userId, io, callback);
+        handleRemoveParticipant(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("changeParticipantRole", (data, callback) => {
         if (!data.conversationId || !data.userId || !data.role) {
-          socket.emit("error", { message: "Invalid data provided on changeParticipantRole" });
+          socket.emit("error", {
+            message: "Invalid data provided on changeParticipantRole",
+          });
           return logger.error("Invalid data provided on changeParticipantRole");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
-          return logger.error("User ID not registered for changeParticipantRole");
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
+          return logger.error(
+            "User ID not registered for changeParticipantRole"
+          );
         }
-        handleChangeParticipantRole(socket, data, socket.handshake.query.userId, io, callback);
+        handleChangeParticipantRole(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("transferGroupAdmin", (data, callback) => {
         if (!data.conversationId || !data.userId) {
-          socket.emit("error", { message: "Invalid data provided on transferGroupAdmin" });
+          socket.emit("error", {
+            message: "Invalid data provided on transferGroupAdmin",
+          });
           return logger.error("Invalid data provided on transferGroupAdmin");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for transferGroupAdmin");
         }
-        handleTransferGroupAdmin(socket, data, socket.handshake.query.userId, io, callback);
+        handleTransferGroupAdmin(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("getChatMedia", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on getChatMedia" });
-          return logger.error("Invalid conversation ID provided on getChatMedia");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on getChatMedia",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on getChatMedia"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for getChatMedia");
         }
-        handleGetChatMedia(socket, data, socket.handshake.query.userId, callback);
+        handleGetChatMedia(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("getChatFiles", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on getChatFiles" });
-          return logger.error("Invalid conversation ID provided on getChatFiles");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on getChatFiles",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on getChatFiles"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for getChatFiles");
         }
-        handleGetChatFiles(socket, data, socket.handshake.query.userId, callback);
+        handleGetChatFiles(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("getChatLinks", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on getChatLinks" });
-          return logger.error("Invalid conversation ID provided on getChatLinks");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on getChatLinks",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on getChatLinks"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for getChatLinks");
         }
-        handleGetChatLinks(socket, data, socket.handshake.query.userId, callback);
+        handleGetChatLinks(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("getChatStorage", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on getChatStorage" });
-          return logger.error("Invalid conversation ID provided on getChatStorage");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on getChatStorage",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on getChatStorage"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for getChatStorage");
         }
-        handleGetChatStorage(socket, data, socket.handshake.query.userId, callback);
+        handleGetChatStorage(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("pinChat", (data, callback) => {
@@ -372,91 +555,167 @@ module.exports = {
           return logger.error("Invalid data provided on pinChat");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for pinChat");
         }
-        handlePinChat(socket, data, socket.handshake.query.userId, io, callback);
+        handlePinChat(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("updateNotification", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid data provided on updateNotification" });
+          socket.emit("error", {
+            message: "Invalid data provided on updateNotification",
+          });
           return logger.error("Invalid data provided on updateNotification");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for updateNotification");
         }
-        handleUpdateNotification(socket, data, socket.handshake.query.userId, io, callback);
+        handleUpdateNotification(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("hideChat", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on hideChat" });
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on hideChat",
+          });
           return logger.error("Invalid conversation ID provided on hideChat");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for hideChat");
         }
-        handleHideChat(socket, data, socket.handshake.query.userId, io, callback);
+        handleHideChat(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("getCommonGroups", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on getCommonGroups" });
-          return logger.error("Invalid conversation ID provided on getCommonGroups");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on getCommonGroups",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on getCommonGroups"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for getCommonGroups");
         }
-        handleGetCommonGroups(socket, data, socket.handshake.query.userId, callback);
+        handleGetCommonGroups(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("findMessages", (data, callback) => {
         if (!data.conversationId || !data.query) {
-          socket.emit("error", { message: "Invalid data provided on findMessages" });
+          socket.emit("error", {
+            message: "Invalid data provided on findMessages",
+          });
           return logger.error("Invalid data provided on findMessages");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for findMessages");
         }
-        handleFindMessages(socket, data, socket.handshake.query.userId, callback);
+        handleFindMessages(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          callback
+        );
       });
 
       socket.on("deleteMessageChatInfo", (data, callback) => {
         if (!data.messageId) {
-          socket.emit("error", { message: "Invalid message ID provided on deleteMessageChatInfo" });
-          return logger.error("Invalid message ID provided on deleteMessageChatInfo");
+          socket.emit("error", {
+            message: "Invalid message ID provided on deleteMessageChatInfo",
+          });
+          return logger.error(
+            "Invalid message ID provided on deleteMessageChatInfo"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
-          return logger.error("User ID not registered for deleteMessageChatInfo");
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
+          return logger.error(
+            "User ID not registered for deleteMessageChatInfo"
+          );
         }
-        deleteMessageChatInfo(socket, data, socket.handshake.query.userId, io, callback);
+        deleteMessageChatInfo(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("forwardMessage", (data, callback) => {
         if (!data.messageId || !data.targetConversationIds || !data.userId) {
-          socket.emit("error", { message: "Invalid data provided on forwardMessage" });
+          socket.emit("error", {
+            message: "Invalid data provided on forwardMessage",
+          });
           return logger.error("Invalid data provided on forwardMessage");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for forwardMessage");
         }
-        handleForwardMessage(socket, data, socket.handshake.query.userId, io, callback);
+        handleForwardMessage(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("leaveGroup", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on leaveGroup" });
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on leaveGroup",
+          });
           return logger.error("Invalid conversation ID provided on leaveGroup");
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for leaveGroup");
         }
         handleLeaveGroup(socket, data, io, callback);
@@ -464,31 +723,59 @@ module.exports = {
 
       socket.on("deleteAllChatHistory", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on deleteAllChatHistory" });
-          return logger.error("Invalid conversation ID provided on deleteAllChatHistory");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on deleteAllChatHistory",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on deleteAllChatHistory"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
-          return logger.error("User ID not registered for deleteAllChatHistory");
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
+          return logger.error(
+            "User ID not registered for deleteAllChatHistory"
+          );
         }
-        handleDeleteAllChatHistory(socket, data, socket.handshake.query.userId, io, callback);
+        handleDeleteAllChatHistory(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("disbandGroup", (data, callback) => {
         if (!data.conversationId) {
-          socket.emit("error", { message: "Invalid conversation ID provided on disbandGroup" });
-          return logger.error("Invalid conversation ID provided on disbandGroup");
+          socket.emit("error", {
+            message: "Invalid conversation ID provided on disbandGroup",
+          });
+          return logger.error(
+            "Invalid conversation ID provided on disbandGroup"
+          );
         }
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for disbandGroup");
         }
-        handleDisbandGroup(socket, data, socket.handshake.query.userId, io, callback);
+        handleDisbandGroup(
+          socket,
+          data,
+          socket.handshake.query.userId,
+          io,
+          callback
+        );
       });
 
       socket.on("verifyPin", async (payload, callback) => {
         if (!socket.handshake.query.userId) {
-          socket.emit("error", { message: "User ID not registered. Please register user first." });
+          socket.emit("error", {
+            message: "User ID not registered. Please register user first.",
+          });
           return logger.error("User ID not registered for verifyPin");
         }
         await handleVerifyPin(socket, payload, callback);
