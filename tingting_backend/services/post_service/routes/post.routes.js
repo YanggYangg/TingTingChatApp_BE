@@ -4,12 +4,13 @@ import {
     getPost,
     createPost,
  } from "../controllers/post.controller.js";
+import { upload } from "../utils/aws.helper.js";
 
 
 const postRouter = Router();
 
 postRouter.get("/", getPosts);
 postRouter.get("/:id", getPost);
-postRouter.post("/", createPost);
+postRouter.post("/", upload, createPost);
 
 export default postRouter;

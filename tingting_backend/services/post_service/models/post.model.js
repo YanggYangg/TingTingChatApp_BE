@@ -9,7 +9,7 @@ const postSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: true,
+      default: "",
     },
     media: [
       {
@@ -22,6 +22,7 @@ const postSchema = new mongoose.Schema(
         },
         thumbnailUrl: {
           type: String,
+          default: "https://lab2s320114581a.s3.ap-southeast-1.amazonaws.com/%20bws1-1747576518127-media_0.png",
         },
       },
     ],
