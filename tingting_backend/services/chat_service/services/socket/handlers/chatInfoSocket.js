@@ -886,94 +886,118 @@ async  handleAddParticipant(socket, { conversationId, userId: newUserId, role = 
   },
 
   // Ghim cuộc trò chuyện
-  async handlePinChat(socket, { conversationId, isPinned }, userId, io, callback) {
-    try {
-      if (typeof isPinned !== "boolean") {
-        socket.emit("error", { message: "isPinned must be a boolean" });
-        return callback && callback({ success: false, message: "isPinned must be a boolean" });
-      }
+async handlePinChat(socket, { conversationId, isPinned }, userId, io, callback) {
+  try {
+    if (typeof isPinned !== "boolean") {
+      socket.emit("error", { message: "isPinned must be a boolean" });
+      return callback && callback({ success: false, message: "isPinned must be a boolean" });
+    }
 
-      logger.info(`User ${userId} pinning conversation ${conversationId} with status ${isPinned}`);
-      const chat = await Conversation.findOneAndUpdate(
-        { _id: conversationId, "participants.userId": userId },
-        { $set: { "participants.$.isPinned": isPinned }, updatedAt: new Date() },
-        { new: true }
-      ).lean();
+    // Nếu yêu cầu ghim, kiểm tra giới hạn
+    if (isPinned) {
+      const pinnedCount = await Conversation.countDocuments({
+        "participants": {
+          $elemMatch: {
+            userId: userId,
+            isPinned: true,
+          },
+        },
+      });
 
-      if (!chat) {
-        socket.emit("error", { message: "Conversation not found" });
-        return callback && callback({ success: false, message: "Conversation not found" });
-      }
-
-      const roomClients = await io.in(conversationId).allSockets();
-      logger.info(`Clients in room ${conversationId}:`, Array.from(roomClients));
-
-      const payload = {
-        _id: chat._id,
-        name: chat.name,
-        isGroup: chat.isGroup,
-        imageGroup: chat.imageGroup,
-        participants: chat.participants,
-        updatedAt: chat.updatedAt,
-      };
-      logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
-      io.to(conversationId).emit("chatInfoUpdated", payload);
-      logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
-      if (callback) {
-        callback({ success: true, data: chat });
-      }
-    } catch (error) {
-      errorHandler(socket, "Failed to pin chat", error);
-      if (callback) {
-        callback({ success: false, message: "Failed to pin chat" });
+      if (pinnedCount >= 5) {
+        socket.emit("error", { message: "Bạn chỉ có thể ghim tối đa 5 cuộc trò chuyện!" });
+        return callback && callback({
+          success: false,
+          message: "Bạn chỉ có thể ghim tối đa 5 cuộc trò chuyện!",
+        });
       }
     }
-  },
 
-  async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
-    try {
-      if (!mongoose.isValidObjectId(conversationId)) {
-        socket.emit("error", { message: "Invalid conversation ID" });
-        return callback && callback({ success: false, message: "Invalid conversation ID" });
-      }
+    logger.info(`User ${userId} pinning conversation ${conversationId} with status ${isPinned}`);
+    const chat = await Conversation.findOneAndUpdate(
+      { _id: conversationId, "participants.userId": userId },
+      { $set: { "participants.$.isPinned": isPinned, updatedAt: new Date() } },
+      { new: true }
+    ).lean();
 
-      logger.info(`User ${userId} updating notification settings for conversation ${conversationId}`);
-      const conversation = await Conversation.findById(conversationId);
-      if (!conversation) {
-        socket.emit("error", { message: "Conversation not found" });
-        return callback && callback({ success: false, message: "Conversation not found" });
-      }
-
-      const participant = conversation.participants.find((p) => p.userId.toString() === userId);
-      if (!participant) {
-        socket.emit("error", { message: "User not found in this conversation" });
-        return callback && callback({ success: false, message: "User not found in this conversation" });
-      }
-
-      participant.mute = mute || null;
-      conversation.updatedAt = new Date();
-      const updatedConversation = await conversation.save();
-
-      const payload = {
-        _id: updatedConversation._id,
-        name: updatedConversation.name,
-        isGroup: updatedConversation.isGroup,
-        imageGroup: updatedConversation.imageGroup,
-        participants: updatedConversation.participants,
-        updatedAt: updatedConversation.updatedAt,
-      };
-      io.to(conversationId).emit("chatInfoUpdated", payload);
-      logger.info(`Notification settings updated for user ${userId} in conversation ${conversationId}`);
-      if (callback) {
-        callback({ success: true, data: updatedConversation });
-      }
-    } catch (error) {
-      errorHandler(socket, "Failed to update notification settings", error);
-      if (callback) {
-        callback({ success: false, message: "Failed to update notification settings" });
-      }
+    if (!chat) {
+      socket.emit("error", { message: "Conversation not found" });
+      return callback && callback({ success: false, message: "Conversation not found" });
     }
-  },
+
+    const payload = {
+      _id: chat._id,
+      name: chat.name,
+      isGroup: chat.isGroup,
+      imageGroup: chat.imageGroup,
+      participants: chat.participants,
+      updatedAt: chat.updatedAt,
+    };
+
+    // Phát sự kiện tới phòng của cuộc trò chuyện
+    logger.info(`Emitting chatInfoUpdated to room ${conversationId}:`, payload);
+    io.to(conversationId).emit("chatInfoUpdated", payload);
+
+    logger.info(`Conversation ${conversationId} pinned status updated to ${isPinned} for user ${userId}`);
+    if (callback) {
+      callback({ success: true, data: chat });
+    }
+  } catch (error) {
+    errorHandler(socket, "Failed to pin chat", error);
+    if (callback) {
+      callback({ success: false, message: "Failed to pin chat" });
+    }
+  }
+},
+
+async handleUpdateNotification(socket, { conversationId, mute }, userId, io, callback) {
+  try {
+    // Kiểm tra giá trị mute hợp lệ theo schema
+    const validMuteValues = ["1h", "4h", "8am", "forever", null];
+    if (!validMuteValues.includes(mute)) {
+      socket.emit("error", { message: "mute phải là một trong: '1h', '4h', '8am', 'forever', hoặc null" });
+      return callback && callback({ success: false, message: "mute phải là một trong: '1h', '4h', '8am', 'forever', hoặc null" });
+    }
+
+    logger.info(`Người dùng ${userId} đang cập nhật cài đặt thông báo cho cuộc trò chuyện ${conversationId} với mute=${mute}`);
+
+    // Cập nhật trạng thái mute
+    const chat = await Conversation.findOneAndUpdate(
+      { _id: conversationId, "participants.userId": userId },
+      { $set: { "participants.$.mute": mute, updatedAt: new Date() } }, // Sửa updateAt thành updatedAt
+      { new: true }
+    ).lean();
+
+    if (!chat) {
+      socket.emit("error", { message: "Không tìm thấy cuộc trò chuyện" });
+      return callback && callback({ success: false, message: "Không tìm thấy cuộc trò chuyện" });
+    }
+
+    const payload = {
+      _id: chat._id,
+      name: chat.name,
+      isGroup: chat.isGroup,
+      imageGroup: chat.imageGroup,
+      participants: chat.participants,
+      updatedAt: chat.updatedAt, // Sửa updateAt thành updatedAt
+    };
+
+    // Phát sự kiện tới phòng cuộc trò chuyện
+    logger.info(`Phát sự kiện chatInfoUpdated tới phòng ${conversationId}:`, payload);
+    io.to(conversationId).emit("chatInfoUpdated", payload);
+
+    logger.info(`Cài đặt thông báo đã được cập nhật cho người dùng ${userId} trong cuộc trò chuyện ${conversationId} với mute=${mute}`);
+    if (callback) {
+      callback({ success: true, data: chat });
+    }
+  } catch (error) {
+    logger.error("Lỗi khi cập nhật cài đặt thông báo:", error);
+    errorHandler(socket, "Không thể cập nhật cài đặt thông báo", error);
+    if (callback) {
+      callback({ success: false, message: "Không thể cập nhật cài đặt thông báo" });
+    }
+  }
+},
   // Ẩn trò chuyện
   // Ẩn trò chuyện
   async handleHideChat(socket, { conversationId, isHidden, pin }, userId, io, callback) {
@@ -1206,6 +1230,7 @@ async  handleDeleteAllChatHistory(socket, { conversationId }, userId, io, callba
     }
   },
 
+  // Xóa tin nhắn
   // Xóa tin nhắn
   async deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
     try {
