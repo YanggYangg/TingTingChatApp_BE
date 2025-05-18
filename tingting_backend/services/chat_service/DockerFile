@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+# Install necessary dependencies for bcrypt
+RUN apk add --no-cache make gcc g++ python3
+
+WORKDIR /app
+
+# Copy package files
+COPY chat_service/package*.json ./
+
+# Install dependencies
+RUN npm install --production
+
+# Copy all source files
+COPY chat_service/ .
+
+# Rebuild bcrypt specifically for Alpine
+RUN npm rebuild bcrypt --update-binary
+
+EXPOSE 5000
+
+CMD ["node", "app.js"]

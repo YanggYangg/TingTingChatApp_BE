@@ -1,0 +1,20 @@
+# Dùng Node.js nhẹ
+FROM node:20-alpine
+
+# Làm việc tại thư mục bên trong container
+WORKDIR /app
+
+# Copy package.json và package-lock.json của auth_service
+COPY auth_service/package*.json ./
+
+# Cài dependencies
+RUN npm install --production
+
+# Copy toàn bộ mã nguồn của auth_service vào container
+COPY auth_service .
+
+# Mở port service (nếu bạn dùng 3002 cho auth_service)
+EXPOSE 3002
+
+# Chạy ứng dụng
+CMD ["node", "app.js"]
