@@ -24,6 +24,7 @@ module.exports = {
                     userId,
                     readBy: message.status.readBy,
                 });
+
                 logger.info(`User ${userId} read message ${messageId}`);
             }
         } catch (error) {
