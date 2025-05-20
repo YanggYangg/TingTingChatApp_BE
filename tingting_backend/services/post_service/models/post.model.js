@@ -36,10 +36,7 @@ const postSchema = new mongoose.Schema(
       ref: "Profiles",
     },
     reactions: {
-      like: { type: Number, default: 0 },
-      love: { type: Number, default: 0 },
-      haha: { type: Number, default: 0 },
-      angry: { type: Number, default: 0 },
+      love: [{ type: mongoose.Schema.Types.ObjectId, ref: "Profiles" }]
     },
     commentsCount: {
       type: Number,
