@@ -33,10 +33,10 @@ jobs:
       - name: Build & Deploy Docker
         run: |
           echo "🔁 Restarting docker-compose services..."
-          docker-compose down
-          docker-compose build
-          docker-compose up -d --remove-orphans
-        working-directory: .  # chỉnh nếu docker-compose.yml không ở root
+          docker compose down
+          docker compose build
+          docker compose up -d --remove-orphans
+        working-directory: ./tingting_backend/services # chỉnh nếu docker-compose.yml không ở root
 
       - name: Done
         run: echo "✅ Deployment finished!"
