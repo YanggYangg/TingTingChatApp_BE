@@ -1,3 +1,10 @@
+name: Deploy to EC2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - staging
 jobs:
   deploy:
     name: Deploy to EC2 Self-Hosted Runner
