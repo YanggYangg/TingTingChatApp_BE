@@ -1,4 +1,5 @@
-import FriendRequest from "../../user_service/models/friendRequest.model.js";
+// import FriendRequest from "../../user_service/models/friendRequest.model.js";
+import FriendRequest from "../models/friendRequest.model.js";
 export const handleSocketConnection = (io) => {
   const onlineUsers = new Map();
 

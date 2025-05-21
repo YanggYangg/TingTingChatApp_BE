@@ -30,6 +30,9 @@ jobs:
       - name: Generate cloud_service env
         run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./tingting_backend/services/cloud-service/.env
 
+      - name: Generate serviceAccountKey.json
+        run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > ./services/notification_service/secrets/serviceAccountKey.json
+
       - name: Build & Deploy Docker
         run: |
           echo "🔁 Restarting docker-compose services..."
