@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - staging
+
 jobs:
   deploy:
     name: Deploy to EC2 Self-Hosted Runner
@@ -29,18 +30,13 @@ jobs:
       - name: Generate cloud_service env
         run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./cloud-service/.env
 
-      # Tiếp tục với các file khác nếu có...
-
-      - name: Pull latest code & restart services
+      - name: Build & Deploy Docker
         run: |
-          echo "📥 Pulling latest code..."
-          git pull origin staging
-
           echo "🔁 Restarting docker-compose services..."
           docker-compose down
           docker-compose build
           docker-compose up -d --remove-orphans
+        working-directory: .  # chỉnh nếu docker-compose.yml không ở root
 
-          echo "✅ Deployment finished!"
-
-          sudo ./svc.sh start
+      - name: Done
+        run: echo "✅ Deployment finished!"
