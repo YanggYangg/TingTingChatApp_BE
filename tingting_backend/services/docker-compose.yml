@@ -34,6 +34,8 @@ services:
       - REDIS_URL=redis://redis:6379
     depends_on:
       - redis
+    env_file:
+    - ./auth_service/.env.development.local
     networks:
       - app-network
 
@@ -47,6 +49,8 @@ services:
       - REDIS_URL=redis://redis:6379
     depends_on:
       - redis
+    env_file:
+    - ./user_service/.env.development.local
     networks:
       - app-network
 
@@ -56,6 +60,8 @@ services:
       dockerfile: chat_service/DockerFile
     ports:
       - "5000:5000"
+    env_file:
+    - ./chat_service/.env
     networks:
       - app-network
 
@@ -69,6 +75,8 @@ services:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq
     depends_on:
       - rabbitmq
+    env_file:
+    - ./notification_service/.env
     networks:
       - app-network
 
@@ -78,6 +86,8 @@ services:
       dockerfile: cloud-service/DockerFile
     ports:
       - "3000:3000"
+    env_file:
+    - ./cloud-service/.env
     networks:
       - app-network
 

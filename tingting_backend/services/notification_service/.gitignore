@@ -41,4 +41,4 @@ Thumbs.db
 # Docker files
 docker-compose.override.yml
 
-secrets/serviceAccountKey.json
+
