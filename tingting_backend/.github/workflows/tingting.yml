@@ -1,0 +1,39 @@
+jobs:
+  deploy:
+    name: Deploy to EC2 Self-Hosted Runner
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate auth_service env
+        run: echo "${{ secrets.AUTH_SERVICE_ENV }}" > ./auth_service/.env.development.local
+
+      - name: Generate user_service env
+        run: echo "${{ secrets.USER_SERVICE_ENV }}" > ./user_service/.env.development.local
+
+      - name: Generate chat_service env
+        run: echo "${{ secrets.CHAT_SERVICE_ENV }}" > ./chat_service/.env
+
+      - name: Generate notification_service env
+        run: echo "${{ secrets.NOTIFICATION_SERVICE_ENV }}" > ./notification_service/.env
+
+      - name: Generate cloud_service env
+        run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./cloud-service/.env
+
+      # Tiếp tục với các file khác nếu có...
+
+      - name: Pull latest code & restart services
+        run: |
+          echo "📥 Pulling latest code..."
+          git pull origin staging
+
+          echo "🔁 Restarting docker-compose services..."
+          docker-compose down
+          docker-compose build
+          docker-compose up -d --remove-orphans
+
+          echo "✅ Deployment finished!"
+
+          sudo ./svc.sh start
