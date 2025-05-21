@@ -35,10 +35,7 @@ const commentSchema = new mongoose.Schema(
       ref: "Comments",
     },
     reactions: {
-      like: { type: Number, default: 0 },
-      love: { type: Number, default: 0 },
-      haha: { type: Number, default: 0 },
-      angry: { type: Number, default: 0 },
+      love: [{ type: mongoose.Schema.Types.ObjectId, ref: "Profiles", default: [] }],
     },
     isHidden: {
       type: Boolean,

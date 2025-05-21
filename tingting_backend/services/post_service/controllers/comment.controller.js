@@ -18,10 +18,33 @@ export const getCommentsByPostId = async (req, res) => {
         message: "Comments not found",
       });
     }
+const formattedComments = comments.map((comment) => {
+      const loveReactions = comment.reactions?.love || []; 
+      const totalReactions = loveReactions.length;
+      const lovedByUser = loveReactions.some(
+        (ids) => ids.toString() === comment.profileId._id.toString()
+      );
+
+      return {
+        _id: comment._id,
+        profileId: comment.profileId,
+        reactions: comment.reactions,
+        content: comment.content,
+        media: comment.media,
+        replyTo: comment.replyTo,
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+        postId: comment.postId,
+        totalReactions,
+        lovedByUser,
+         ...comment._doc, 
+      };
+    });
+
     res.status(200).json({
       success: true,
       data: {
-        comments,
+        comments: formattedComments,
       },
     });
   } catch (error) {
@@ -94,5 +117,35 @@ export const updateComment = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+export const toggleLoveReaction = async (req, res) => {
+  const { id } = req.params;
+  const { profileId } = req.body;
+
+  if (!profileId) return res.status(400).json({ message: "Missing profileId" });
+
+  try {
+    console.log("commentId:", id);
+    const comment = await Comment.findById(id);
+    if (!comment) return res.status(404).json({ message: "comment not found" });
+    const alreadyLoved = comment.reactions?.love?.includes(profileId);
+
+    if (alreadyLoved) {
+      comment.reactions.love.pull(profileId);
+    } else {
+      comment.reactions.love.push(profileId);
+    }
+
+    await comment.save();
+
+    res.json({
+      message: alreadyLoved ? "Love removed" : "Loved comment",
+      loveCount: comment.reactions.love.length,
+      lovedByUser: !alreadyLoved,
+    });
+  } catch (error) {
+    console.error("Toggle love error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
