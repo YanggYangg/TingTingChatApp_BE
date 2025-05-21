@@ -51,7 +51,8 @@ const Notification = require('../models/Notification');
 const UserFcmToken = require('../models/UserFcmToken');
 const admin = require('../configs/firebase');
 
-const RABBITMQ_URL = 'amqp://localhost';
+//const RABBITMQ_URL = 'amqp://localhost';
+const RABBITMQ_URL = 'amqp://guest:guest@rabbitmq';
 const QUEUE_NAME = 'chat_notifications';
 
 async function consumeMessages() {
