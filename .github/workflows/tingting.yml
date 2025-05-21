@@ -31,7 +31,7 @@ jobs:
         run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./tingting_backend/services/cloud-service/.env
 
       - name: Generate serviceAccountKey.json
-        run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > ./services/notification_service/secrets/serviceAccountKey.json
+        run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json
 
       - name: Build & Deploy Docker
         run: |
