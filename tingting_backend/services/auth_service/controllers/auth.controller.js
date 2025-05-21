@@ -188,10 +188,13 @@ export const generateToken = async (req, res, next) => {
     await redisClient.del(`${phone}:sign-in`);
 
     const existingUser = await User.findOne({ phone });
-
+    const profile = await axios.get(
+      `http://localhost:${PORT_USER_SERVICE}/api/v1/profile/${existingUser.userId}`
+    );
     const claims = {
       id: existingUser._id,
       phone: existingUser.phone,
+      profileId: profile.data.data.user._id,
     };
     const token = jwt.sign(
       {
@@ -205,9 +208,6 @@ export const generateToken = async (req, res, next) => {
     await redisClient.set(`${phone}:token`, token, {
       EX: 60 * 60 * 1,
     });
-    const profile = await axios.get(
-      `http://localhost:${PORT_USER_SERVICE}/api/v1/profile/${existingUser.userId}`
-    );
 
     res.status(200).json({
       success: true,

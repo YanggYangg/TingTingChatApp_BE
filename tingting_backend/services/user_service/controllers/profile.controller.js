@@ -21,7 +21,7 @@ export const getProfiles = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const { id, phone } = req.params;
-    const user = await Profile.findById(id).select("-password -__v");
+    const user = await Profile.findById(id.trim()).select("-password -__v");
     if (!user) {
       return res.status(404).json({
         status: "fail",
@@ -37,7 +37,7 @@ export const getProfile = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       status: "error",
-      message: "Server error",
+      message: error.message,
     });
   }
 };
