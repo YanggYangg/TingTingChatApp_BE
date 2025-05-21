@@ -16,19 +16,19 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Generate auth_service env
-        run: echo "${{ secrets.AUTH_SERVICE_ENV }}" > ./services/auth_service/.env.development.local
+        run: echo "${{ secrets.AUTH_SERVICE_ENV }}" > ./tingting_backend/services/auth_service/.env.development.local
 
       - name: Generate user_service env
-        run: echo "${{ secrets.USER_SERVICE_ENV }}" > ./services/user_service/.env.development.local
+        run: echo "${{ secrets.USER_SERVICE_ENV }}" > ./tingting_backend/services/user_service/.env.development.local
 
       - name: Generate chat_service env
-        run: echo "${{ secrets.CHAT_SERVICE_ENV }}" > ./services/chat_service/.env
+        run: echo "${{ secrets.CHAT_SERVICE_ENV }}" > ./tingting_backend/services/chat_service/.env
 
       - name: Generate notification_service env
-        run: echo "${{ secrets.NOTIFICATION_SERVICE_ENV }}" > ./services/notification_service/.env
+        run: echo "${{ secrets.NOTIFICATION_SERVICE_ENV }}" > ./tingting_backend/services/notification_service/.env
 
       - name: Generate cloud_service env
-        run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./services/cloud-service/.env
+        run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./tingting_backend/services/cloud-service/.env
 
       - name: Build & Deploy Docker
         run: |
