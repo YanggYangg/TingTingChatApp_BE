@@ -8,7 +8,7 @@ const { getAllConversations,
   getAllGroups,
   getUserJoinGroup,
   getOrCreateConversation,
-  getAllConversationById2
+  getAllConversationById2,
 } = require('../controllers/conversationController');
 const chatInfoController = require('../controllers/chatInfoController');
 const router = express.Router();
@@ -52,5 +52,6 @@ router.delete('/:conversationId', deleteConversationHistory); // Xóa cuộc tr�
 // router.delete('/delete-all', chatController.deleteAllMessagesInConversationForMe);
 
 router.delete('/disbandGroup/:conversationId', disbandGroup); // Xóa nhóm
+router.get('/getUserGroups/:userId', chatInfoController.getUserGroups); // Lấy danh sách nhóm của người dùng
 
 module.exports = router;

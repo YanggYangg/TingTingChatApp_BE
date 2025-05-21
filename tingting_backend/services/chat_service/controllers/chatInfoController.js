@@ -262,20 +262,20 @@ module.exports = {
     // Lấy danh sách ảnh/video đã gửi trong nhóm
     getChatMedia: async (req, res) => {
         try {
-          const { conversationId } = req.params;
-          const media = await Message.find({
-            conversationId: conversationId,
-            messageType: { $in: ['image', 'video'] },
-            linkURL: { $exists: true, $ne: [] }, // Chỉ lấy tin nhắn có linkURL không rỗng
-          }).select('_id messageType content linkURL userId createdAt');
-      
-          console.log(`Lấy danh sách media trong chat ${conversationId}:`, media);
-          res.json(media.length ? media : []);
+            const { conversationId } = req.params;
+            const media = await Message.find({
+                conversationId: conversationId,
+                messageType: { $in: ['image', 'video'] },
+                linkURL: { $exists: true, $ne: [] }, // Chỉ lấy tin nhắn có linkURL không rỗng
+            }).select('_id messageType content linkURL userId createdAt');
+
+            console.log(`Lấy danh sách media trong chat ${conversationId}:`, media);
+            res.json(media.length ? media : []);
         } catch (error) {
-          console.error(`Lỗi khi lấy danh sách media:`, error);
-          res.status(500).json({ error: error.message });
+            console.error(`Lỗi khi lấy danh sách media:`, error);
+            res.status(500).json({ error: error.message });
         }
-      },
+    },
 
     // Lấy danh sách file đã gửi trong nhóm
     getChatFiles: async (req, res) => {
@@ -760,6 +760,39 @@ module.exports = {
         } catch (error) {
             console.error(`Lỗi khi tìm kiếm tin nhắn:`, error);
             res.status(500).json({ error: error.message });
+        }
+    },
+
+    getUserGroups: async (req, res) => {
+        try {
+            const { userId } = req.params;
+
+            // Kiểm tra userId hợp lệ
+            if (!userId) {
+                return res.status(400).json({ error: 'Invalid userId' });
+            }
+
+            // Tìm các nhóm mà người dùng tham gia
+            const groups = await Conversation.find({
+                participants: { $elemMatch: { userId } },
+                isGroup: true,
+            })
+                .select('_id name imageGroup participants')
+                .lean()
+                .exec();
+
+            // Định dạng dữ liệu trả về
+            const formattedGroups = groups.map(group => ({
+                _id: group._id,
+                name: group.name || 'Unnamed Group',
+                imageGroup: group.imageGroup || 'https://media.istockphoto.com/id/1306949457/vi/vec-to/nh%E1%BB%AFng-ng%C6%B0%E1%BB%9Di-%C4%91ang-t%C3%ACm-ki%E1%BA%BFm-c%C3%A1c-gi%E1%BA%A3i-ph%C3%A1p-s%C3%A1ng-t%E1%BA%A0o-kh%C3%A1i-ni%E1%BB%87m-kinh-doanh-l%C3%A0m-vi%E1%BB%87c-nh%C3%B3m-minh-h%E1%BB%8Da.jpg',
+                participantCount: group.participants.length,
+            }));
+
+            res.json({ success: true, groups: formattedGroups });
+        } catch (error) {
+            console.error(`Error fetching groups for user ${userId}:`, error);
+            res.status(500).json({ success: false, error: 'Internal server error' });
         }
     }
 

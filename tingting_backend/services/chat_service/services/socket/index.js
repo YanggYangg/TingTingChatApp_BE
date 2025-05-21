@@ -781,6 +781,13 @@ module.exports = {
         await handleVerifyPin(socket, payload, callback);
       });
 
+      socket.on("joinUserRoom", ({ userId }) => {
+        if (userId) {
+          socket.join(`user:${userId}`);
+          logger.info(`Socket ${socket.id} joined room user:${userId}`);
+        }
+      });
+
       // Handle disconnect
       socket.on("disconnect", () => {
         logger.info(`Client disconnected: ${socket.id}`);

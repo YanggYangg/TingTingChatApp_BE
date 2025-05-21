@@ -112,7 +112,7 @@ module.exports = {
   }
 
   if (
-    ["image", "file", "video"].includes(message.messageType) &&
+    ["image", "file", "video", "link"].includes(message.messageType) &&
     !message.linkURL
   ) {
     return errorHandler(socket, "File message must have a linkURL");
