@@ -31,9 +31,25 @@ export const getPublicPosts = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate("profileId", "_id surname firstname avatar");
 
+      const formattedPosts = posts.map((post) => {
+      const loveReactions = post.reactions?.love || []; 
+      const totalReactions = loveReactions.length;
+      const lovedByUser = loveReactions.some(
+        (ids) => ids.toString() === userId
+      );
+    
+      return {
+        _id: post._id,
+        profileId: post.profileId,
+        ...post._doc, 
+        totalReactions,
+        lovedByUser,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: { posts },
+      data: { posts: formattedPosts },
     });
   } catch (error) {
     console.error("Error fetching public posts:", error);
