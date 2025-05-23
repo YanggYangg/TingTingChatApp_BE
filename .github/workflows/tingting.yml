@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Deploy to EC2
 
 on:
   workflow_dispatch: {}
@@ -7,15 +7,15 @@ on:
       - staging
 
 jobs:
-  build:
-    name: Build Docker Image
+  deploy:
+    name: Deploy to EC2 Self-Hosted Runner
     runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-     - name: Generate auth_service env
+      - name: Generate auth_service env
         run: echo "${{ secrets.AUTH_SERVICE_ENV }}" > ./tingting_backend/services/auth_service/.env.development.local
 
       - name: Generate user_service env
@@ -40,24 +40,15 @@ jobs:
         run: |
          jq . ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json
 
-      - name: Build Docker
-        run: docker-compose build
-        working-directory: ./tingting_backend/services
 
-  deploy:
-    name: Deploy to EC2
-    runs-on: self-hosted
-    needs: build
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Restart Docker Services
+      - name: Build & Deploy Docker
         run: |
-          docker-compose down
-          docker-compose up -d --remove-orphans
-        working-directory: ./tingting_backend/services
+          echo "🔁 Restarting docker-compose services..."
+          docker compose down
+          docker compose build
+          docker compose up -d --remove-orphans
+        working-directory: ./tingting_backend/services # chỉnh nếu docker-compose.yml không ở root
 
       - name: Done
-        run: echo "✅ Deployment completed!"
+        run: echo "✅ Deployment finished!"
