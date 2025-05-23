@@ -15,19 +15,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Generate environment files
-        run: |
-          echo "${{ secrets.AUTH_SERVICE_ENV }}" > ./tingting_backend/services/auth_service/.env.development.local
-          echo "${{ secrets.USER_SERVICE_ENV }}" > ./tingting_backend/services/user_service/.env.development.local
-          echo "${{ secrets.CHAT_SERVICE_ENV }}" > ./tingting_backend/services/chat_service/.env
-          echo "${{ secrets.NOTIFICATION_SERVICE_ENV }}" > ./tingting_backend/services/notification_service/.env
-          echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./tingting_backend/services/cloud-service/.env
-          cat > ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json <<EOF
-          ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          EOF
+     - name: Generate auth_service env
+        run: echo "${{ secrets.AUTH_SERVICE_ENV }}" > ./tingting_backend/services/auth_service/.env.development.local
 
-      - name: Validate Firebase JSON
-        run: jq . ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json
+      - name: Generate user_service env
+        run: echo "${{ secrets.USER_SERVICE_ENV }}" > ./tingting_backend/services/user_service/.env.development.local
+
+      - name: Generate chat_service env
+        run: echo "${{ secrets.CHAT_SERVICE_ENV }}" > ./tingting_backend/services/chat_service/.env
+
+      - name: Generate notification_service env
+        run: echo "${{ secrets.NOTIFICATION_SERVICE_ENV }}" > ./tingting_backend/services/notification_service/.env
+
+      - name: Generate cloud_service env
+        run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./tingting_backend/services/cloud-service/.env
+
+      - name: Generate serviceAccountKey.json
+        run: |
+         cat > ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json <<EOF
+         ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+         EOF
+
+      - name: Validate JSON
+        run: |
+         jq . ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json
 
       - name: Build Docker
         run: docker-compose build
