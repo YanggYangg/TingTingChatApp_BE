@@ -30,7 +30,7 @@ jobs:
         run: jq . ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json
 
       - name: Build Docker
-        run: docker compose build
+        run: docker-compose build
         working-directory: ./tingting_backend/services
 
   deploy:
