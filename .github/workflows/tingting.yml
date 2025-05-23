@@ -44,8 +44,8 @@ jobs:
 
       - name: Restart Docker Services
         run: |
-          docker compose down
-          docker compose up -d --remove-orphans
+          docker-compose down
+          docker-compose up -d --remove-orphans
         working-directory: ./tingting_backend/services
 
       - name: Done
