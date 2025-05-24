@@ -779,7 +779,7 @@ module.exports = {
           });
           return logger.error("User ID not registered for verifyPin");
         }
-        await handleVerifyPin(socket, payload, callback);
+        await handleVerifyPin(socket, payload, callback, io);
       });
 
       socket.on("joinUserRoom", ({ userId }) => {

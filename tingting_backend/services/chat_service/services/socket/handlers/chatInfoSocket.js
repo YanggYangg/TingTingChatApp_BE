@@ -909,16 +909,26 @@ module.exports = {
   //   }
   // },
 
-  async handleVerifyPin(socket, payload, callback, io) {
+ async handleVerifyPin(socket, payload, callback, io) {
   try {
     const { conversationId, userId, pin } = payload;
 
-    const chat = await Conversation.findById(conversationId);
+    // Kiểm tra payload
+    if (!conversationId || !userId || !pin) {
+      return typeof callback === "function" && callback({ success: false, message: "Thiếu thông tin yêu cầu" });
+    }
+
+    const chat = await Conversation.findById(conversationId).exec();
     if (!chat) {
       return typeof callback === "function" && callback({ success: false, message: "Không tìm thấy cuộc trò chuyện" });
     }
 
-    const participant = chat.participants.find((p) => p.userId.toString() === userId);
+    // Kiểm tra participants
+    if (!chat.participants || !Array.isArray(chat.participants)) {
+      return typeof callback === "function" && callback({ success: false, message: "Dữ liệu thành viên không hợp lệ" });
+    }
+
+    const participant = chat.participants.find((p) => p.userId && p.userId.toString() === userId);
     if (!participant) {
       return typeof callback === "function" && callback({ success: false, message: "Bạn không phải là thành viên của cuộc trò chuyện" });
     }
@@ -938,7 +948,7 @@ module.exports = {
 
     await chat.save();
 
-    // Phát sự kiện chatInfoUpdated để thông báo cho client
+    // Phát sự kiện chatInfoUpdated
     io.to(conversationId).emit("chatInfoUpdated", {
       _id: chat._id,
       name: chat.name,
@@ -949,7 +959,7 @@ module.exports = {
       updatedAt: chat.updatedAt,
     });
 
-    // Phát sự kiện chatHidden để cập nhật danh sách
+    // Phát sự kiện chatHidden
     socket.emit("chatHidden", {
       conversationId,
       isHidden: false,
@@ -1142,7 +1152,7 @@ module.exports = {
   },
 
   // Xóa tin nhắn
-  async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, callback) {
+async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, callback) {
   try {
     logger.info(`Gọi deleteMessageChatInfo với:`, {
       messageId,
@@ -1183,7 +1193,7 @@ module.exports = {
 
     // Tìm tin nhắn
     const message = await Message.findById(messageId).select(
-      "conversationId userId linkURL messageType isRevoked deletedBy"
+      "conversationId userId linkURL messageType isRevoked deletedBy content"
     );
     if (!message) {
       logger.error(`Không tìm thấy tin nhắn: ${messageId}`);
@@ -1313,14 +1323,13 @@ module.exports = {
     // Kiểm tra nếu tin nhắn vẫn tồn tại
     const updatedMessage = isMessageDeleted
       ? null
-      : await Message.findById(messageId).select("linkURL conversationId messageType deletedBy");
+      : await Message.findById(messageId).select("linkURL conversationId messageType deletedBy content");
 
     // Cập nhật lastMessage của cuộc trò chuyện
     const lastValidMessage = await Message.findOne({
       conversationId: message.conversationId,
       isRevoked: false,
       deletedBy: { $ne: userId },
-      linkURL: { $exists: true, $ne: [] },
     }).sort({ createdAt: -1 });
 
     conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
@@ -1350,10 +1359,19 @@ module.exports = {
       deletedBy: userId,
     });
 
-    // Phát sự kiện conversationUpdated
+    // Phát sự kiện conversationUpdated với thông tin đầy đủ của lastMessage
     io.to(message.conversationId.toString()).emit("conversationUpdated", {
       conversationId: message.conversationId.toString(),
-      lastMessage: lastValidMessage || null,
+      lastMessage: lastValidMessage
+        ? {
+            _id: lastValidMessage._id,
+            content: lastValidMessage.content || "",
+            messageType: lastValidMessage.messageType || "text",
+            userId: lastValidMessage.userId || null,
+            createdAt: lastValidMessage.createdAt,
+            linkURL: lastValidMessage.linkURL || [],
+          }
+        : null,
       updatedAt: conversation.updatedAt,
     });
 
