@@ -8,7 +8,14 @@ const axios = require('axios'); // Import axios để gọi API từ UserService
 module.exports = {
 
   searchMessages: async (req, res) => {
-    const { searchTerm, page = 1, limit = 20 } = req.query;
+    const {
+      searchTerm,
+      senderId,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = req.query;
     const userId = req.userId;
     const { conversationId } = req.params;
 
@@ -16,7 +23,7 @@ module.exports = {
     if (!conversationId || !searchTerm) {
       return res.status(400).json({
         success: false,
-        error: 'Cần cung cấp conversationId và searchTerm',
+        error: "Cần cung cấp conversationId và searchTerm",
       });
     }
 
@@ -24,32 +31,85 @@ module.exports = {
     if (!ObjectId.isValid(conversationId)) {
       return res.status(400).json({
         success: false,
-        error: 'conversationId không hợp lệ',
+        error: "conversationId không hợp lệ",
       });
+    }
+
+    // Kiểm tra tính hợp lệ của senderId (nếu có)
+    if (senderId && !ObjectId.isValid(senderId)) {
+      return res.status(400).json({
+        success: false,
+        error: "senderId không hợp lệ",
+      });
+    }
+
+    // Kiểm tra và định dạng ngày (nếu có)
+    let startDateObj, endDateObj;
+    if (startDate) {
+      startDateObj = new Date(startDate);
+      if (isNaN(startDateObj.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: "startDate không hợp lệ",
+        });
+      }
+    }
+    if (endDate) {
+      endDateObj = new Date(endDate);
+      if (isNaN(endDateObj.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: "endDate không hợp lệ",
+        });
+      }
+      // Đặt endDate về cuối ngày (23:59:59.999)
+      endDateObj.setHours(23, 59, 59, 999);
+    }
+
+    // Nếu có endDate mà không có startDate, đặt startDate là ngày xa nhất
+    if (endDate && !startDate) {
+      startDateObj = new Date(0); // 1970-01-01
+    }
+
+    // Nếu có startDate mà không có endDate, đặt endDate là hiện tại
+    if (startDate && !endDate) {
+      endDateObj = new Date();
+      endDateObj.setHours(23, 59, 59, 999);
     }
 
     try {
       const skip = (page - 1) * limit;
 
-      // Tìm kiếm tin nhắn với regex
-      const messages = await Message.find({
+      // Xây dựng truy vấn
+      const query = {
         conversationId: new ObjectId(conversationId),
-        content: { $regex: searchTerm, $options: 'i' }, // Tìm kiếm không phân biệt hoa thường
+        content: { $regex: searchTerm, $options: "i" }, // Tìm kiếm không phân biệt hoa thường
         isRevoked: false,
-        deletedBy: { $ne: userId },
-      })
+        deletedBy: { $ne: userId }, // Loại bỏ tin nhắn đã xóa bởi người dùng
+      };
+
+      // Thêm bộ lọc người gửi
+      if (senderId) {
+        query.userId = new ObjectId(senderId);
+      }
+
+      // Thêm bộ lọc ngày
+      if (startDateObj && endDateObj) {
+        query.createdAt = {
+          $gte: startDateObj,
+          $lte: endDateObj,
+        };
+      }
+
+      // Tìm kiếm tin nhắn
+      const messages = await Message.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
-        .lean(); // Sử dụng .lean() để trả về plain JavaScript object
+        .lean();
 
       // Đếm tổng số tin nhắn phù hợp
-      const total = await Message.countDocuments({
-        conversationId: new ObjectId(conversationId),
-        content: { $regex: searchTerm, $options: 'i' },
-        isRevoked: false,
-        deletedBy: { $ne: userId },
-      });
+      const total = await Message.countDocuments(query);
 
       // Nếu không có tin nhắn, trả về ngay
       if (!messages || messages.length === 0) {
@@ -63,27 +123,23 @@ module.exports = {
       }
 
       // Lấy danh sách userId duy nhất từ các tin nhắn
-      const userIds = [
-        ...new Set(messages.map((msg) => msg.userId.toString())),
-      ];
+      const userIds = [...new Set(messages.map((msg) => msg.userId.toString()))];
 
       let users = [];
       if (userIds.length > 0) {
-        // Gọi API UserService để lấy thông tin người dùng
         try {
           const userResponse = await axios.get(
-            `http://localhost:3001/api/v1/profile?ids=${userIds.join(',')}`
+            `http://localhost:3001/api/v1/profile?ids=${userIds.join(",")}`
           );
-          console.log('Dữ liệu trả về từ UserService:', userResponse.data);
-          // Kiểm tra cấu trúc dữ liệu trả về
+          console.log("Dữ liệu trả về từ UserService:", userResponse.data);
           users = Array.isArray(userResponse.data.users)
             ? userResponse.data.users
             : Array.isArray(userResponse.data?.data?.users)
               ? userResponse.data.data.users
               : [];
         } catch (error) {
-          console.error('Lỗi khi gọi UserService:', error.message);
-          users = []; // Tiếp tục với users rỗng nếu UserService thất bại
+          console.error("Lỗi khi gọi UserService:", error.message);
+          users = [];
         }
       }
 
@@ -98,13 +154,12 @@ module.exports = {
       // Gắn thông tin người dùng vào tin nhắn
       const formattedMessages = messages.map((msg) => {
         const userData = userMap[msg.userId.toString()] || {};
-        console.log('Thông tin người dùng:', userData);
         return {
           ...msg,
           userId: {
             _id: msg.userId,
-            firstname: userData.firstname || 'Unknown',
-            surname: userData.surname || '',
+            firstname: userData.firstname || "Unknown",
+            surname: userData.surname || "",
             avatar: userData.avatar || null,
           },
         };
@@ -119,10 +174,10 @@ module.exports = {
         limit: Number(limit),
       });
     } catch (error) {
-      console.error('Lỗi khi tìm kiếm tin nhắn:', error.message);
+      console.error("Lỗi khi tìm kiếm tin nhắn:", error.message);
       res.status(500).json({
         success: false,
-        error: 'Lỗi server',
+        error: "Lỗi server",
       });
     }
   },
