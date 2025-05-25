@@ -1152,9 +1152,9 @@ module.exports = {
   },
 
   // Xóa tin nhắn
-async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, callback) {
+async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
   try {
-    // Ghi log thông tin đầu vào
+    // 1. Ghi log thông tin đầu vào
     logger.info(`Gọi deleteMessageChatInfo với:`, {
       messageId,
       urlIndex,
@@ -1164,9 +1164,9 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
       callbackType: typeof callback,
     });
 
-    logger.info(`Người dùng ${userId} yêu cầu xóa tin nhắn ${messageId}${urlIndex !== null ? ` tại chỉ mục ${urlIndex}` : ""}`);
+    logger.info(`Người dùng ${userId} yêu cầu xóa URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId}`);
 
-    // 1. Kiểm tra đầu vào
+    // 2. Kiểm tra đầu vào
     if (!mongoose.isValidObjectId(messageId)) {
       logger.error(`ID tin nhắn không hợp lệ: ${messageId}`);
       socket.emit("error", { message: "ID tin nhắn không hợp lệ" });
@@ -1185,7 +1185,7 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
       return;
     }
 
-    if (urlIndex !== null && (!Number.isInteger(urlIndex) || urlIndex < 0)) {
+    if (urlIndex === null || !Number.isInteger(urlIndex) || urlIndex < 0) {
       logger.error(`Chỉ mục URL không hợp lệ: ${urlIndex}`);
       socket.emit("error", { message: "Chỉ mục URL không hợp lệ" });
       if (typeof callback === "function") {
@@ -1194,7 +1194,7 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
       return;
     }
 
-    // 2. Tìm tin nhắn
+    // 3. Tìm tin nhắn
     const message = await Message.findById(messageId).select(
       "conversationId userId linkURL messageType isRevoked deletedBy content"
     );
@@ -1207,17 +1207,17 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
       return;
     }
 
-    // 3. Kiểm tra tin nhắn đã bị thu hồi
+    // 4. Kiểm tra tin nhắn đã bị thu hồi
     if (message.isRevoked) {
       logger.error(`Tin nhắn ${messageId} đã bị thu hồi`);
-      socket.emit("error", { message: "Không thể xóa tin nhắn đã thu hồi" });
+      socket.emit("error", { message: "Không thể xóa URL của tin nhắn đã thu hồi" });
       if (typeof callback === "function") {
-        callback({ success: false, message: "Không thể xóa tin nhắn đã thu hồi" });
+        callback({ success: false, message: "Không thể xóa URL của tin nhắn đã thu hồi" });
       }
       return;
     }
 
-    // 4. Kiểm tra conversationId
+    // 5. Kiểm tra conversationId
     if (!message.conversationId || !mongoose.isValidObjectId(message.conversationId)) {
       logger.error(`ID cuộc trò chuyện không hợp lệ trong tin nhắn ${messageId}`);
       socket.emit("error", { message: "ID cuộc trò chuyện không hợp lệ" });
@@ -1227,7 +1227,7 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
       return;
     }
 
-    // 5. Tìm cuộc trò chuyện
+    // 6. Tìm cuộc trò chuyện
     const conversation = await Conversation.findById(message.conversationId);
     if (!conversation) {
       logger.error(`Không tìm thấy cuộc trò chuyện: ${message.conversationId}`);
@@ -1238,110 +1238,75 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
       return;
     }
 
-    // 6. Kiểm tra người dùng là thành viên
+    // 7. Kiểm tra người dùng là thành viên
     const isParticipant = conversation.participants.some(
       (participant) => participant.userId === userId
     );
     if (!isParticipant) {
       logger.error(`Người dùng ${userId} không phải thành viên của cuộc trò chuyện ${message.conversationId}`);
-      socket.emit("error", { message: "Bạn không có quyền xóa tin nhắn trong cuộc trò chuyện này" });
+      socket.emit("error", { message: "Bạn không có quyền xóa URL trong cuộc trò chuyện này" });
       if (typeof callback === "function") {
-        callback({ success: false, message: "Bạn không có quyền xóa tin nhắn trong cuộc trò chuyện này" });
+        callback({ success: false, message: "Bạn không có quyền xóa URL trong cuộc trò chuyện này" });
       }
       return;
     }
 
-    let isMessageDeleted = false;
-
-    // 7. Xử lý xóa URL hoặc thêm userId vào deletedBy
-    if (urlIndex !== null && message.linkURL && Array.isArray(message.linkURL)) {
-      if (urlIndex >= message.linkURL.length) {
-        logger.error(`Chỉ mục URL ${urlIndex} không hợp lệ cho tin nhắn ${messageId}`);
-        socket.emit("error", { message: "Chỉ mục URL không hợp lệ cho tin nhắn này" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Chỉ mục URL không hợp lệ cho tin nhắn này" });
-        }
-        return;
+    // 8. Kiểm tra mảng linkURL và urlIndex
+    if (!message.linkURL || !Array.isArray(message.linkURL) || urlIndex >= message.linkURL.length) {
+      logger.error(`Chỉ mục URL ${urlIndex} không hợp lệ hoặc linkURL không tồn tại cho tin nhắn ${messageId}`);
+      socket.emit("error", { message: "Chỉ mục URL không hợp lệ cho tin nhắn này" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Chỉ mục URL không hợp lệ cho tin nhắn này" });
       }
-
-      // Xóa URL tại chỉ mục urlIndex
-      const updateResult = await Message.updateOne(
-        { _id: messageId },
-        { $unset: { [`linkURL.${urlIndex}`]: 1 } }
-      );
-
-      if (updateResult.modifiedCount === 0) {
-        logger.error(`Không thể xóa URL tại chỉ mục ${urlIndex} cho tin nhắn ${messageId}`);
-        socket.emit("error", { message: "Không thể xóa URL" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Không thể xóa URL" });
-        }
-        return;
-      }
-
-      // Xóa các giá trị null/undefined trong linkURL
-      await Message.updateOne(
-        { _id: messageId },
-        { $pull: { linkURL: null } }
-      );
-
-      // Kiểm tra nếu linkURL rỗng sau khi xóa
-      const updatedMessage = await Message.findById(messageId).select("linkURL");
-      if (!updatedMessage.linkURL || updatedMessage.linkURL.length === 0) {
-        // Đánh dấu tin nhắn là đã xóa nếu không còn URL
-        await Message.updateOne(
-          { _id: messageId },
-          { $addToSet: { deletedBy: userId } }
-        );
-        isMessageDeleted = true;
-        logger.info(`Tin nhắn ${messageId} không còn URL, được đánh dấu là đã xóa cho người dùng ${userId}`);
-      } else {
-        logger.info(`Đã xóa URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId}`);
-      }
-    } else {
-      // Thêm userId vào deletedBy nếu không có urlIndex
-      const updateResult = await Message.updateOne(
-        { _id: messageId },
-        { $addToSet: { deletedBy: userId } }
-      );
-
-      if (updateResult.modifiedCount === 0) {
-        logger.error(`Không thể thêm ${userId} vào deletedBy cho tin nhắn ${messageId}`);
-        socket.emit("error", { message: "Không thể xóa tin nhắn" });
-        if (typeof callback === "function") {
-          callback({ success: false, message: "Không thể xóa tin nhắn" });
-        }
-        return;
-      }
-      isMessageDeleted = true;
-      logger.info(`Đã thêm ${userId} vào deletedBy cho tin nhắn ${messageId}`);
+      return;
     }
 
-    // 8. Cập nhật lastMessage của cuộc trò chuyện
+    // 9. Xóa URL tại chỉ mục urlIndex
+    const updateResult = await Message.updateOne(
+      { _id: messageId },
+      { $unset: { [`linkURL.${urlIndex}`]: 1 } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      logger.error(`Không thể xóa URL tại chỉ mục ${urlIndex} cho tin nhắn ${messageId}`);
+      socket.emit("error", { message: "Không thể xóa URL" });
+      if (typeof callback === "function") {
+        callback({ success: false, message: "Không thể xóa URL" });
+      }
+      return;
+    }
+
+    // Loại bỏ giá trị null trong linkURL
+    await Message.updateOne(
+      { _id: messageId },
+      { $pull: { linkURL: null } }
+    );
+
+    logger.info(`Đã xóa URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId}`);
+
+    // 10. Cập nhật lastMessage của cuộc trò chuyện
     const lastValidMessage = await Message.findOne({
       conversationId: message.conversationId,
       isRevoked: false,
-      deletedBy: { $ne: userId },
     }).sort({ createdAt: -1 });
 
     conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
     conversation.updatedAt = new Date();
     await conversation.save();
 
-    // 9. Phát sự kiện messageDeleted tới các thiết bị của userId và phòng conversation
+    // 11. Phát sự kiện messageDeleted chỉ tới các thiết bị của người dùng hiện tại
     const messageDeletedPayload = {
       messageId,
       urlIndex,
-      isMessageDeleted,
+      isMessageDeleted: false, // Không xóa toàn bộ tin nhắn
       conversationId: message.conversationId.toString(),
-      deletedBy: userId,
+      userId: userId, // Chỉ gửi đến người dùng hiện tại
     };
 
     io.to(`user-${userId}`).emit("messageDeleted", messageDeletedPayload);
-    io.to(message.conversationId.toString()).emit("messageDeleted", messageDeletedPayload);
-    logger.info(`Đã phát sự kiện messageDeleted`, messageDeletedPayload);
+    logger.info(`Đã phát sự kiện messageDeleted tới user-${userId}`, messageDeletedPayload);
 
-    // 10. Phát sự kiện conversationUpdated với thông tin đầy đủ của lastMessage
+    // 12. Phát sự kiện conversationUpdated chỉ tới người dùng hiện tại
     const conversationUpdatedPayload = {
       conversationId: message.conversationId.toString(),
       lastMessage: lastValidMessage
@@ -1357,65 +1322,59 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
         : null,
       updatedAt: conversation.updatedAt,
     };
-    io.to(message.conversationId.toString()).emit("conversationUpdated", conversationUpdatedPayload);
-    logger.info(`Đã phát sự kiện conversationUpdated`, conversationUpdatedPayload);
+    io.to(`user-${userId}`).emit("conversationUpdated", conversationUpdatedPayload);
+    logger.info(`Đã phát sự kiện conversationUpdated tới user-${userId}`, conversationUpdatedPayload);
 
-    // 11. Cập nhật media, files, links
+    // 13. Cập nhật danh sách media, files, links chỉ cho người dùng hiện tại
     if (message.messageType === "image" || message.messageType === "video") {
       const media = await Message.find({
         conversationId: message.conversationId,
         messageType: { $in: ["image", "video"] },
         linkURL: { $exists: true, $ne: [] },
         isRevoked: false,
-        deletedBy: { $ne: userId },
       }).lean();
-      io.to(message.conversationId.toString()).emit("chatMedia", media.length ? media : []);
-      logger.info(`Đã cập nhật chatMedia cho cuộc trò chuyện ${message.conversationId}`);
+      io.to(`user-${userId}`).emit("chatMedia", media.length ? media : []);
+      logger.info(`Đã cập nhật chatMedia cho người dùng ${userId}`);
     } else if (message.messageType === "file") {
       const files = await Message.find({
         conversationId: message.conversationId,
         messageType: "file",
         linkURL: { $exists: true, $ne: [] },
         isRevoked: false,
-        deletedBy: { $ne: userId },
       }).lean();
-      io.to(message.conversationId.toString()).emit("chatFiles", files.length ? files : []);
-      logger.info(`Đã cập nhật chatFiles cho cuộc trò chuyện ${message.conversationId}`);
+      io.to(`user-${userId}`).emit("chatFiles", files.length ? files : []);
+      logger.info(`Đã cập nhật chatFiles cho người dùng ${userId}`);
     } else if (message.messageType === "link") {
       const links = await Message.find({
         conversationId: message.conversationId,
         messageType: "link",
         linkURL: { $exists: true, $ne: [] },
         isRevoked: false,
-        deletedBy: { $ne: userId },
       }).lean();
-      io.to(message.conversationId.toString()).emit("chatLinks", links.length ? links : []);
-      logger.info(`Đã cập nhật chatLinks cho cuộc trò chuyện ${message.conversationId}`);
+      io.to(`user-${userId}`).emit("chatLinks", links.length ? links : []);
+      logger.info(`Đã cập nhật chatLinks cho người dùng ${userId}`);
     }
 
-    // 12. Ghi log thành công
-    logger.info(
-      isMessageDeleted
-        ? `Tin nhắn ${messageId} đã được xóa cho người dùng ${userId}`
-        : `URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId} đã được xóa cho người dùng ${userId}`
-    );
+    // 14. Ghi log thành công
+    logger.info(`URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId} đã được xóa cho người dùng ${userId}`);
 
-    // 13. Gửi phản hồi callback
+    // 15. Gửi phản hồi callback
     if (typeof callback === "function") {
       callback({
         success: true,
-        data: { messageId, urlIndex, isMessageDeleted, deletedBy: userId },
+        data: { messageId, urlIndex, isMessageDeleted: false },
       });
     }
   } catch (error) {
-    // 14. Xử lý lỗi
-    logger.error(`Không thể xóa tin nhắn ${messageId} cho người dùng ${userId}: ${error.message}`);
-    socket.emit("error", { message: "Không thể xóa tin nhắn", error: error.message });
+    // 16. Xử lý lỗi
+    logger.error(`Không thể xóa URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId} cho người dùng ${userId}: ${error.message}`);
+    socket.emit("error", { message: "Không thể xóa URL", error: error.message });
     if (typeof callback === "function") {
-      callback({ success: false, message: "Không thể xóa tin nhắn", error: error.message });
+      callback({ success: false, message: "Không thể xóa URL", error: error.message });
     }
   }
 },
+
 
   // Chuyển tiếp tin nhắn
   async handleForwardMessage(socket, { messageId, targetConversationIds, userId: forwarderId, content }, userId, io, callback) {
@@ -1767,199 +1726,5 @@ async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, 
     }
   },
 
-// async deleteMessageChatInfo(socket, { messageId, urlIndex = null }, userId, io, callback) {
-//   try {
-//     // Log chi tiết yêu cầu xóa
-//     logger.info(`Người dùng ${userId} yêu cầu xóa tin nhắn ${messageId}${urlIndex !== null ? ` tại chỉ mục ${urlIndex}` : ''}`);
-
-//     // Kiểm tra đầu vào
-//     if (!mongoose.isValidObjectId(messageId)) {
-//       logger.error(`ID tin nhắn không hợp lệ: ${messageId}`);
-//       socket.emit('error', { message: 'ID tin nhắn không hợp lệ' });
-//       callback?.({ success: false, message: 'ID tin nhắn không hợp lệ' });
-//       return;
-//     }
-//     if (!userId || typeof userId !== 'string') {
-//       logger.error(`ID người dùng không hợp lệ: ${userId}`);
-//       socket.emit('error', { message: 'ID người dùng không hợp lệ' });
-//       callback?.({ success: false, message: 'ID người dùng không hợp lệ' });
-//       return;
-//     }
-//     if (urlIndex !== null && (!Number.isInteger(urlIndex) || urlIndex < 0)) {
-//       logger.error(`Chỉ mục URL không hợp lệ: ${urlIndex}`);
-//       socket.emit('error', { message: 'Chỉ mục URL không hợp lệ' });
-//       callback?.({ success: false, message: 'Chỉ mục URL không hợp lệ' });
-//       return;
-//     }
-
-//     // Tìm tin nhắn
-//     const message = await Message.findById(messageId).select('conversationId userId linkURL messageType isRevoked deletedBy');
-//     if (!message) {
-//       logger.error(`Không tìm thấy tin nhắn: ${messageId}`);
-//       socket.emit('error', { message: 'Không tìm thấy tin nhắn' });
-//       callback?.({ success: false, message: 'Không tìm thấy tin nhắn' });
-//       return;
-//     }
-
-//     // Kiểm tra tin nhắn đã bị thu hồi
-//     if (message.isRevoked) {
-//       logger.error(`Tin nhắn ${messageId} đã bị thu hồi`);
-//       socket.emit('error', { message: 'Không thể xóa tin nhắn đã thu hồi' });
-//       callback?.({ success: false, message: 'Không thể xóa tin nhắn đã thu hồi' });
-//       return;
-//     }
-
-//     // Kiểm tra conversationId
-//     if (!message.conversationId || !mongoose.isValidObjectId(message.conversationId)) {
-//       logger.error(`ID cuộc trò chuyện không hợp lệ trong tin nhắn ${messageId}`);
-//       socket.emit('error', { message: 'ID cuộc trò chuyện không hợp lệ' });
-//       callback?.({ success: false, message: 'ID cuộc trò chuyện không hợp lệ' });
-//       return;
-//     }
-
-//     // Tìm cuộc trò chuyện
-//     const conversation = await Conversation.findById(message.conversationId);
-//     if (!conversation) {
-//       logger.error(`Không tìm thấy cuộc trò chuyện: ${message.conversationId}`);
-//       socket.emit('error', { message: 'Không tìm thấy cuộc trò chuyện' });
-//       callback?.({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
-//       return;
-//     }
-
-//     // Kiểm tra người dùng là thành viên
-//     if (!conversation.participants.some(p => p.userId === userId)) {
-//       logger.error(`Người dùng ${userId} không phải thành viên của cuộc trò chuyện ${message.conversationId}`);
-//       socket.emit('error', { message: 'Bạn không có quyền xóa tin nhắn trong cuộc trò chuyện này' });
-//       callback?.({ success: false, message: 'Bạn không có quyền xóa tin nhắn trong cuộc trò chuyện này' });
-//       return;
-//     }
-
-//     let isMessageDeleted = false;
-
-//     // Xử lý xóa URL hoặc thêm userId vào deletedBy
-//     if (urlIndex !== null && Array.isArray(message.linkURL)) {
-//       if (urlIndex >= message.linkURL.length) {
-//         logger.error(`Chỉ mục URL ${urlIndex} không hợp lệ cho tin nhắn ${messageId}`);
-//         socket.emit('error', { message: 'Chỉ mục URL không hợp lệ cho tin nhắn này' });
-//         callback?.({ success: false, message: 'Chỉ mục URL không hợp lệ cho tin nhắn này' });
-//         return;
-//       }
-
-//       if (message.linkURL.length > 1) {
-//         // Xóa URL tại chỉ mục urlIndex và làm sạch mảng
-//         await Message.updateOne({ _id: messageId }, { $unset: { [`linkURL.${urlIndex}`]: 1 } });
-//         await Message.updateOne({ _id: messageId }, { $pull: { linkURL: null } });
-//         logger.info(`Đã xóa URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId} cho người dùng ${userId}`);
-//       } else {
-//         // Nếu chỉ còn 1 URL, đánh dấu toàn bộ tin nhắn là đã xóa
-//         const updateResult = await Message.updateOne(
-//           { _id: messageId },
-//           { $addToSet: { deletedBy: userId } }
-//         );
-//         if (updateResult.modifiedCount === 0) {
-//           logger.error(`Không thể thêm ${userId} vào deletedBy cho tin nhắn ${messageId}`);
-//           socket.emit('error', { message: 'Không thể xóa tin nhắn' });
-//           callback?.({ success: false, message: 'Không thể xóa tin nhắn' });
-//           return;
-//         }
-//         isMessageDeleted = true;
-//         logger.info(`Đã đánh dấu tin nhắn ${messageId} là đã xóa cho người dùng ${userId}`);
-//       }
-//     } else {
-//       // Đánh dấu toàn bộ tin nhắn là đã xóa cho userId
-//       const updateResult = await Message.updateOne(
-//         { _id: messageId },
-//         { $addToSet: { deletedBy: userId } }
-//       );
-//       if (updateResult.modifiedCount === 0) {
-//         logger.error(`Không thể thêm ${userId} vào deletedBy cho tin nhắn ${messageId}`);
-//         socket.emit('error', { message: 'Không thể xóa tin nhắn' });
-//         callback?.({ success: false, message: 'Không thể xóa tin nhắn' });
-//         return;
-//       }
-//       isMessageDeleted = true;
-//       logger.info(`Đã đánh dấu tin nhắn ${messageId} là đã xóa cho người dùng ${userId}`);
-//     }
-
-//     // **SỬA ĐỔI 1**: Phát sự kiện messageDeleted tới tất cả các thiết bị của userId
-//     io.to(`user-${userId}`).emit('messageDeleted', {
-//       messageId,
-//       urlIndex,
-//       isMessageDeleted,
-//       conversationId: message.conversationId.toString(),
-//       deletedBy: userId,
-//     });
-//     logger.info(`Đã phát sự kiện messageDeleted tới user-${userId}`, { messageId, urlIndex, isMessageDeleted });
-
-//     // **SỬA ĐỔI 2**: Tìm tin nhắn hợp lệ cuối cùng chưa bị xóa bởi userId
-//     const lastValidMessage = await Message.findOne({
-//       conversationId: message.conversationId,
-//       isRevoked: false,
-//       deletedBy: { $ne: userId },
-//     }).sort({ createdAt: -1 });
-
-//     // Cập nhật conversation
-//     conversation.lastMessage = lastValidMessage ? lastValidMessage._id : null;
-//     conversation.updatedAt = new Date();
-//     await conversation.save();
-
-//     // **SỬA ĐỔI 3**: Phát sự kiện conversationUpdated tới tất cả các thiết bị của userId
-//     io.to(`user-${userId}`).emit('conversationUpdated', {
-//       conversationId: message.conversationId.toString(),
-//       lastMessage: lastValidMessage ? {
-//         _id: lastValidMessage._id,
-//         content: lastValidMessage.content,
-//         messageType: lastValidMessage.messageType,
-//         userId: lastValidMessage.userId,
-//         createdAt: lastValidMessage.createdAt,
-//       } : null,
-//       updatedAt: conversation.updatedAt,
-//     });
-//     logger.info(`Đã phát sự kiện conversationUpdated tới user-${userId}`, { conversationId: message.conversationId });
-
-//     // **SỬA ĐỔI 4**: Cập nhật media, files, links chỉ cho userId
-//     if (['image', 'video'].includes(message.messageType)) {
-//       const media = await Message.find({
-//         conversationId: message.conversationId,
-//         messageType: { $in: ['image', 'video'] },
-//         linkURL: { $exists: true, $ne: [] },
-//         isRevoked: false,
-//         deletedBy: { $ne: userId },
-//       }).lean();
-//       io.to(`user-${userId}`).emit('chatMedia', media.length ? media : []);
-//       logger.info(`Đã phát sự kiện chatMedia tới user-${userId}`);
-//     } else if (message.messageType === 'file') {
-//       const files = await Message.find({
-//         conversationId: message.conversationId,
-//         messageType: 'file',
-//         linkURL: { $exists: true, $ne: [] },
-//         isRevoked: false,
-//         deletedBy: { $ne: userId },
-//       }).lean();
-//       io.to(`user-${userId}`).emit('chatFiles', files.length ? files : []);
-//       logger.info(`Đã phát sự kiện chatFiles tới user-${userId}`);
-//     } else if (message.messageType === 'link') {
-//       const links = await Message.find({
-//         conversationId: message.conversationId,
-//         messageType: 'link',
-//         linkURL: { $exists: true, $ne: [] },
-//         isRevoked: false,
-//         deletedBy: { $ne: userId },
-//       }).lean();
-//       io.to(`user-${userId}`).emit('chatLinks', links.length ? links : []);
-//       logger.info(`Đã phát sự kiện chatLinks tới user-${userId}`);
-//     }
-
-//     // Gọi callback với kết quả
-//     callback?.({
-//       success: true,
-//       data: { messageId, urlIndex, isMessageDeleted, deletedBy: userId },
-//     });
-//   } catch (error) {
-//     logger.error(`Lỗi khi xóa tin nhắn ${messageId}${urlIndex !== null ? ` tại chỉ mục ${urlIndex}` : ''} cho người dùng ${userId}: ${error.message}`);
-//     socket.emit('error', { message: 'Lỗi khi xóa tin nhắn', error: error.message });
-//     callback?.({ success: false, message: 'Lỗi khi xóa tin nhắn', error: error.message });
-//   }
-// },
 
 };
