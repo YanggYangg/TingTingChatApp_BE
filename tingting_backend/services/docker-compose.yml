@@ -104,7 +104,7 @@ services:
       context: .
       dockerfile: post-service/DockerFile
     env_file:
-      - ./post-service/.env.development.local
+      - ./post_service/.env.development.local
     ports:
       - "3006:3006"
     environment:
