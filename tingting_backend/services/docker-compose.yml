@@ -99,7 +99,7 @@ services:
       - app-network
     restart: always
 
-  post-service:
+  post_service:
     build: 
       context: .
       dockerfile: post-service/DockerFile
