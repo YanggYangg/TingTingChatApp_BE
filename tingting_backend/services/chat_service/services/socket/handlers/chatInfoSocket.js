@@ -1152,7 +1152,7 @@ module.exports = {
   },
 
   // Xóa tin nhắn
-async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
+async deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callback) {
   try {
     // 1. Ghi log thông tin đầu vào
     logger.info(`Gọi deleteMessageChatInfo với:`, {
@@ -1240,7 +1240,7 @@ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callba
 
     // 7. Kiểm tra người dùng là thành viên
     const isParticipant = conversation.participants.some(
-      (participant) => participant.userId === userId
+      (participant) => participant.userId.toString() === userId
     );
     if (!isParticipant) {
       logger.error(`Người dùng ${userId} không phải thành viên của cuộc trò chuyện ${message.conversationId}`);
@@ -1294,19 +1294,19 @@ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callba
     conversation.updatedAt = new Date();
     await conversation.save();
 
-    // 11. Phát sự kiện messageDeleted chỉ tới các thiết bị của người dùng hiện tại
+    // 11. Phát sự kiện messageDeleted tới tất cả thành viên trong phòng
     const messageDeletedPayload = {
       messageId,
       urlIndex,
       isMessageDeleted: false, // Không xóa toàn bộ tin nhắn
       conversationId: message.conversationId.toString(),
-      userId: userId, // Chỉ gửi đến người dùng hiện tại
+      deletedBy: userId, // Gửi thông tin người xóa
     };
 
-    io.to(`user-${userId}`).emit("messageDeleted", messageDeletedPayload);
-    logger.info(`Đã phát sự kiện messageDeleted tới user-${userId}`, messageDeletedPayload);
+    io.to(message.conversationId.toString()).emit("messageDeleted", messageDeletedPayload);
+    logger.info(`Đã phát sự kiện messageDeleted tới phòng ${message.conversationId}`, messageDeletedPayload);
 
-    // 12. Phát sự kiện conversationUpdated chỉ tới người dùng hiện tại
+    // 12. Phát sự kiện conversationUpdated tới tất cả thành viên trong phòng
     const conversationUpdatedPayload = {
       conversationId: message.conversationId.toString(),
       lastMessage: lastValidMessage
@@ -1322,10 +1322,10 @@ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callba
         : null,
       updatedAt: conversation.updatedAt,
     };
-    io.to(`user-${userId}`).emit("conversationUpdated", conversationUpdatedPayload);
-    logger.info(`Đã phát sự kiện conversationUpdated tới user-${userId}`, conversationUpdatedPayload);
+    io.to(message.conversationId.toString()).emit("conversationUpdated", conversationUpdatedPayload);
+    logger.info(`Đã phát sự kiện conversationUpdated tới phòng ${message.conversationId}`, conversationUpdatedPayload);
 
-    // 13. Cập nhật danh sách media, files, links chỉ cho người dùng hiện tại
+    // 13. Cập nhật danh sách media, files, links cho tất cả thành viên trong phòng
     if (message.messageType === "image" || message.messageType === "video") {
       const media = await Message.find({
         conversationId: message.conversationId,
@@ -1333,8 +1333,8 @@ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callba
         linkURL: { $exists: true, $ne: [] },
         isRevoked: false,
       }).lean();
-      io.to(`user-${userId}`).emit("chatMedia", media.length ? media : []);
-      logger.info(`Đã cập nhật chatMedia cho người dùng ${userId}`);
+      io.to(message.conversationId.toString()).emit("chatMedia", media.length ? media : []);
+      logger.info(`Đã cập nhật chatMedia cho phòng ${message.conversationId}`);
     } else if (message.messageType === "file") {
       const files = await Message.find({
         conversationId: message.conversationId,
@@ -1342,8 +1342,8 @@ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callba
         linkURL: { $exists: true, $ne: [] },
         isRevoked: false,
       }).lean();
-      io.to(`user-${userId}`).emit("chatFiles", files.length ? files : []);
-      logger.info(`Đã cập nhật chatFiles cho người dùng ${userId}`);
+      io.to(message.conversationId.toString()).emit("chatFiles", files.length ? files : []);
+      logger.info(`Đã cập nhật chatFiles cho phòng ${message.conversationId}`);
     } else if (message.messageType === "link") {
       const links = await Message.find({
         conversationId: message.conversationId,
@@ -1351,12 +1351,12 @@ async  deleteMessageChatInfo(socket, { messageId, urlIndex }, userId, io, callba
         linkURL: { $exists: true, $ne: [] },
         isRevoked: false,
       }).lean();
-      io.to(`user-${userId}`).emit("chatLinks", links.length ? links : []);
-      logger.info(`Đã cập nhật chatLinks cho người dùng ${userId}`);
+      io.to(message.conversationId.toString()).emit("chatLinks", links.length ? links : []);
+      logger.info(`Đã cập nhật chatLinks cho phòng ${message.conversationId}`);
     }
 
     // 14. Ghi log thành công
-    logger.info(`URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId} đã được xóa cho người dùng ${userId}`);
+    logger.info(`URL tại chỉ mục ${urlIndex} của tin nhắn ${messageId} đã được xóa bởi người dùng ${userId}`);
 
     // 15. Gửi phản hồi callback
     if (typeof callback === "function") {
