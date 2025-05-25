@@ -33,7 +33,7 @@ module.exports = {
         "participants.userId": userId
       });
       if (userGroups.length === 0) {
-        return res.status(404).json([]);
+        return res.status(200).json([]);
       }
 
       res.status(200).json(userGroups);
@@ -232,7 +232,8 @@ module.exports = {
 
   // == Nhi thêm
   // == Nhi thêm
-  getAllConversationById2: async (req, res) => {
+  
+   getAllConversationById2: async (req, res) => {
     try {
       const { userId } = req.params;
       const { search } = req.query;
@@ -419,3 +420,4 @@ module.exports = {
     }
   }
 };
+

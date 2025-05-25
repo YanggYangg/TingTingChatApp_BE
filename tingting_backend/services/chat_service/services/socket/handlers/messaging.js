@@ -180,7 +180,7 @@ module.exports = {
         //Send socket real-time to mobile
           io.to(recipientId.toString()).emit("new_notification", {
             typeNotice: "new_message",
-            content: `Bạn có tin nhắn mới thiệt nè`,
+            content: `Bạn có tin nhắn mới `,
             conversationId,
             messageId: savedMessage._id,
             createdAt: savedMessage.createdAt,
