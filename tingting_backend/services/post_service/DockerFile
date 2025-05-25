@@ -10,7 +10,7 @@ COPY post_service/package*.json ./
 # Cài dependencies
 RUN npm install --production
 
-# Copy toàn bộ mã nguồn của post_service vào container
+# Copy toàn bộ mã nguồn của post_service vào containerr
 COPY post_service .
 
 # Mở port service
