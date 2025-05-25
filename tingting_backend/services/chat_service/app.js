@@ -8,6 +8,7 @@ const conversationRoutes = require("./routes/conversationRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const callRoutes = require("./routes/callRoutes");
+const chatgptRoutes = require("./routes/chatgptRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +28,7 @@ app.use("/conversations", conversationRoutes);
 app.use("/messages", messageRoutes);
 app.use("/chats", chatRoutes);
 app.use("/calls", callRoutes);
+app.use("/", chatgptRoutes);
 
 app.use("/api/conversations", callRoutes);
 connectDB();
