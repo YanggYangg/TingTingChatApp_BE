@@ -102,7 +102,7 @@ services:
   post_service:
     build: 
       context: .
-      dockerfile: post-service/DockerFile
+      dockerfile: post_service/DockerFile
     env_file:
       - ./post_service/.env.development.local
     ports:
