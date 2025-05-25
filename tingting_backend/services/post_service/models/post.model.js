@@ -9,7 +9,7 @@ const postSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: true,
+      default: "",
     },
     media: [
       {
@@ -22,11 +22,12 @@ const postSchema = new mongoose.Schema(
         },
         thumbnailUrl: {
           type: String,
+          default: "https://lab2s320114581a.s3.ap-southeast-1.amazonaws.com/%20bws1-1747576518127-media_0.png",
         },
       },
     ],
     privacy: {
-      type: String,
+      type: String, 
       enum: ["public", "friends", "private"],
       default: "public",
     },
@@ -35,10 +36,7 @@ const postSchema = new mongoose.Schema(
       ref: "Profiles",
     },
     reactions: {
-      like: { type: Number, default: 0 },
-      love: { type: Number, default: 0 },
-      haha: { type: Number, default: 0 },
-      angry: { type: Number, default: 0 },
+      love: [{ type: mongoose.Schema.Types.ObjectId, ref: "Profiles" }]
     },
     commentsCount: {
       type: Number,

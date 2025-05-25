@@ -5,6 +5,7 @@ import connectToDatabase from './database/mongodb.js';
 import cookieParser from 'cookie-parser';
 import errorMiddleware from './middlewares/error.middleware.js';
 import postRouter from './routes/post.routes.js';
+import commnentRouter from './routes/comment.routes.js';
 
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(cors({
 }));
 
 app.use('/api/v1/post', postRouter);
+app.use('/api/v1/comment', commnentRouter);
 
 app.use(errorMiddleware);
 

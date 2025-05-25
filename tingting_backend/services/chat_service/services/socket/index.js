@@ -44,6 +44,7 @@ const {
   handleLeaveGroup,
   handleDisbandGroup,
   handleVerifyPin,
+  // revokeMessageChatInfo
 } = require("./handlers/chatInfoSocket");
 const socketConfig = require("../../configs/socketConfig");
 
@@ -778,9 +779,45 @@ module.exports = {
           });
           return logger.error("User ID not registered for verifyPin");
         }
-        await handleVerifyPin(socket, payload, callback);
+        await handleVerifyPin(socket, payload, callback, io);
       });
 
+      socket.on("joinUserRoom", ({ userId }) => {
+        if (userId) {
+          socket.join(`user:${userId}`);
+          logger.info(`Socket ${socket.id} joined room user:${userId}`);
+        }
+      });
+
+
+      // Thu hồi tin nhắn
+
+      // socket.on("revokeMessageChatInfo", (data, callback) => {
+      //   if (!data.messageId) {
+      //     socket.emit("error", {
+      //       message: "Invalid message ID provided on revokeMessageChatInfo",
+      //     });
+      //     return logger.error(
+      //       "Invalid message ID provided on revokeMessageChatInfo"
+      //     );
+      //   }
+      //   if (!socket.handshake.query.userId) {
+      //     socket.emit("error", {
+      //       message: "User ID not registered. Please register user first.",
+      //     });
+      //     return logger.error(
+      //       "User ID not registered for revokeMessageChatInfo"
+      //     );
+      //   }
+      //   revokeMessageChatInfo(
+      //     socket,
+      //     data,
+      //     socket.handshake.query.userId,
+      //     io,
+      //     callback
+      //   );
+      // });
+      
       // Handle disconnect
       socket.on("disconnect", () => {
         logger.info(`Client disconnected: ${socket.id}`);

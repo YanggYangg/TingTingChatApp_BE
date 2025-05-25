@@ -99,6 +99,22 @@ services:
       - app-network
     restart: always
 
+  post-service:
+    build: 
+      context: .
+      dockerfile: post-service/DockerFile
+    env_file:
+      - ./post-service/.env.development.local
+    ports:
+      - "3006:3006"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    restart: always
+
 networks:
   app-network:
     driver: bridge 

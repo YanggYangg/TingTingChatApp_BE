@@ -1,0 +1,20 @@
+# Dùng Node.js nhẹ
+FROM node:20-alpine
+
+# Làm việc tại thư mục bên trong container
+WORKDIR /app
+
+# Copy package.json và package-lock.json của notification_service
+COPY post_service/package*.json ./
+
+# Cài dependencies
+RUN npm install --production
+
+# Copy toàn bộ mã nguồn của notification_service vào container
+COPY post_service .
+
+# Mở port service
+EXPOSE 3003
+
+# Chạy ứng dụng
+CMD ["node", "app.js"]
