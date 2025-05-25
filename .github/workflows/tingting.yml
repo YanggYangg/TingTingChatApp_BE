@@ -31,6 +31,9 @@ jobs:
       - name: Generate cloud_service env
         run: echo "${{ secrets.CLOUD_SERVICE_ENV }}" > ./tingting_backend/services/cloud-service/.env
 
+      - name: Generate post_service env
+        run: echo "${{ secrets.POST_SERVICE_ENV }}" > ./tingting_backend/services/post_service/.env.development.local
+
       - name: Generate serviceAccountKey.json
         run: |
          cat > ./tingting_backend/services/notification_service/secrets/serviceAccountKey.json <<EOF
