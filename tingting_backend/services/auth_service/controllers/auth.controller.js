@@ -73,7 +73,7 @@ export const createAccount = async (req, res, next) => {
     };
 
     const response = await axios.post(
-      `http://localhost:${PORT_USER_SERVICE}/api/v1/profile`,
+      `http://100.28.46.80:${PORT_USER_SERVICE}/api/v1/profile`,
       profile
     );
     console.log("profile", profile);
@@ -206,7 +206,7 @@ export const generateToken = async (req, res, next) => {
       EX: 60 * 60 * 1,
     });
     const profile = await axios.get(
-      `http://localhost:${PORT_USER_SERVICE}/api/v1/profile/${existingUser.userId}`
+      `http://100.28.46.80:${PORT_USER_SERVICE}/api/v1/profile/${existingUser.userId}`
     );
 
     res.status(200).json({
