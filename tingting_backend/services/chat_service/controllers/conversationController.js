@@ -232,7 +232,8 @@ module.exports = {
 
   // == Nhi thêm
   // == Nhi thêm
-  getAllConversationById2: async (req, res) => {
+  
+   getAllConversationById2: async (req, res) => {
     try {
       const { userId } = req.params;
       const { search } = req.query;
@@ -419,3 +420,4 @@ module.exports = {
     }
   }
 };
+

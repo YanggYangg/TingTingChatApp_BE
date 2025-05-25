@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllMessages, getMessageByConversationId, deleteMessage, sendMessageWithMedia } = require('../controllers/messageController');
+const { getAllMessages, getMessageByConversationId, deleteMessage, sendMessageWithMedia, searchMessages } = require('../controllers/messageController');
 const router = express.Router();
 
 const { uploadMultiple, uploadSingle } = require('../middleware/upload');
@@ -17,6 +17,7 @@ router.get('/:conversationId/reminders', chatInfoController.getReminders);
 router.delete('/delete', deleteMessage); // Xóa nhiều tin nhắn bằng ID
 router.delete('/revoke',chatController.revokeMessage); // Xóa nhiều tin nhắn bằng ID
 router.post('/sendMessageWithMedia', uploadSingle, sendMessageWithMedia);
+router.get('/search/:conversationId', searchMessages); // Tìm kiếm tin nhắn theo từ khóa
 
 
 
