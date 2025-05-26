@@ -43,11 +43,11 @@ module.exports = {
         return callback && callback({ success: false, message: 'Bạn không có trong cuộc trò chuyện này' });
       }
 
-      // Kiểm tra quyền admin nếu là nhóm
-      if (chat.isGroup && participant.role !== 'admin') {
-        socket.emit('error', { message: 'Chỉ admin mới có thể cập nhật thông tin nhóm' });
-        return callback && callback({ success: false, message: 'Chỉ admin mới có thể cập nhật thông tin nhóm' });
-      }
+      // // Kiểm tra quyền admin nếu là nhóm
+      // if (chat.isGroup && participant.role !== 'admin') {
+      //   socket.emit('error', { message: 'Chỉ admin mới có thể cập nhật thông tin nhóm' });
+      //   return callback && callback({ success: false, message: 'Chỉ admin mới có thể cập nhật thông tin nhóm' });
+      // }
 
       // Chuẩn bị dữ liệu cập nhật
       const updateData = { updatedAt: new Date() };
