@@ -6,7 +6,8 @@ import {
     toggleLoveReaction,
     deletePost,
     updatePostPrivacy,
-    hidePost
+    hidePost,
+    getPostByProfileIdOfOther
  } from "../controllers/post.controller.js";
 import { upload } from "../utils/aws.helper.js";
 import { authorize } from "../middlewares/auth.middleware.js";
@@ -21,5 +22,7 @@ postRouter.post("/", upload, createPost);
 postRouter.delete("/:id", deletePost);
 postRouter.put("/:id/privacy", updatePostPrivacy);
 postRouter.post("/hide", hidePost);
+postRouter.get("/:id/other", getPostByProfileIdOfOther);
+
 
 export default postRouter;
