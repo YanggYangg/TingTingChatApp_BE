@@ -18,7 +18,7 @@ initializeSocket(server);
 
 app.use(cors({
     //origin: ['http://localhost:5173', 'http://localhost:8081'],
-    origin : "*",
+    origin : '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     credentials: true
