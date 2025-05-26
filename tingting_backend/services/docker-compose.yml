@@ -21,8 +21,7 @@ services:
       - "5672:5672"   # AMQP protocol port
       - "15672:15672" # Management UI port
     environment:
-      - RABBITMQ_DEFAULT_USER=myuser
-      - RABBITMQ_DEFAULT_PASS=mypassword
+      - RABBITMQ_URL=amqp://myuser:mypassword@rabbitmq
     networks:
       - app-network
     restart: always
