@@ -285,4 +285,49 @@ export const hidePost = async (req, res) => {
   }
 };
 
+export const getPostByProfileIdOfOther = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const post = await Post.find({ privacy: "public", profileId: id });
+
+    
+    
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+    const formattedPosts = post.map((post) => {
+      const loveReactions = post.reactions?.love || []; 
+      const totalReactions = loveReactions.length;
+      const lovedByUser = loveReactions.some(
+        (ids) => ids.toString() === id
+      );
+    
+      return {
+        _id: post._id,
+        profileId: post.profileId,
+        ...post._doc, 
+        totalReactions,
+        lovedByUser,
+      };
+    });
+    
+
+    res.status(200).json({
+      success: true,
+      data: {
+        post: formattedPosts,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
 

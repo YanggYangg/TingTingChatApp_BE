@@ -149,6 +149,7 @@ if (senderSocketId) {
     // unfriend
 socket.on("unfriend", async ({ userId1, userId2 }, callback) => {
   try {
+    console.log("📨 Nhận yêu cầu unfriend từ:", userId1, userId2);
     const deleted = await FriendRequest.findOneAndDelete({
       $or: [
         { requester: userId1, recipient: userId2, status: "accepted" },
